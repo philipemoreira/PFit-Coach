@@ -6,6 +6,7 @@ import { salvarDoc } from './dados.js';
 import { rascunhoSalvo, retomarTreino, descartarRascunho } from './treinar.js';
 import { regrasDoDia } from './dieta.js';
 import { nav } from './nav.js';
+import { volumeDoDia, metaVolume, metaAgua, aguaDoDia, sequenciaSemanas, formatarVolume } from './metricas.js';
 
 const LETRAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']; // segunda a domingo
 
@@ -98,6 +99,34 @@ function blocoTiles() {
   </article>`;
 }
 
+function barra(valor, meta) {
+  const pct = meta ? Math.min(100, (valor / meta) * 100) : 0;
+  return `<div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="${meta || 0}" aria-valuenow="${Math.round(valor)}"><i style="width:${pct.toFixed(1)}%"></i></div>`;
+}
+
+function blocoDia() {
+  const vol = volumeDoDia(dataLocal());
+  const mv = metaVolume();
+  const ml = aguaDoDia();
+  const ma = metaAgua();
+  const seq = sequenciaSemanas();
+  return `
+  <div class="grade-cards">
+  <section class="card">
+    <div class="card-topo"><h2>Volume de hoje</h2>${mv && vol >= mv ? '<span class="selo">meta batida 🎉</span>' : ''}</div>
+    <p class="grande">${Math.round(vol).toLocaleString('pt-BR')} <small>kg</small></p>
+    ${mv ? `${barra(vol, mv)}<p class="mudo peq">Meta do dia: ${formatarVolume(mv)}</p>`
+      : '<p class="mudo peq">Soma de carga × repetições dos seus treinos. <button class="link" type="button" data-acao="metas-editar">Definir meta</button></p>'}
+  </section>
+  <section class="card">
+    <div class="card-topo"><h2>Água</h2><span class="selo">${seq.semanas > 0 ? `🔥 ${seq.semanas} sem. seguida${seq.semanas === 1 ? '' : 's'}` : 'sem sequência ainda'}</span></div>
+    <p class="grande">${(ml / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} <small>litros</small></p>
+    ${ma ? `${barra(ml, ma)}<p class="mudo peq">Meta: ${(ma / 1000).toLocaleString('pt-BR')} L</p>` : '<p class="mudo peq"><button class="link" type="button" data-acao="metas-editar">Definir meta de água</button></p>'}
+    <div class="linha-botoes"><button class="btn secundario" type="button" data-acao="agua-menos" aria-label="Tirar um copo">− Copo</button><button class="btn" type="button" data-acao="agua-mais" aria-label="Adicionar um copo de 250 mililitros">+ Copo (250 ml)</button></div>
+  </section>
+  </div>`;
+}
+
 function blocoChecklist() {
   const regras = regrasDoDia();
   if (!regras.length) {
@@ -138,9 +167,12 @@ export const hoje = {
       ${blocoHero()}
       ${blocoTiles()}
     </section>
+    ${blocoDia()}
     ${blocoChecklist()}`;
   },
   acoes: {
+    'agua-mais': () => { const d = dataLocal(); salvarDoc(estado.uid, 'agua', d, { data: d, ml: aguaDoDia(d) + 250 }); },
+    'agua-menos': () => { const d = dataLocal(); salvarDoc(estado.uid, 'agua', d, { data: d, ml: Math.max(0, aguaDoDia(d) - 250) }); },
     'regra-marcar': (el) => {
       const id = el.dataset.id;
       const data = dataLocal();

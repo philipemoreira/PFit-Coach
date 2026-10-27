@@ -2,12 +2,13 @@
 import { auth, signOut } from './firebase.js';
 import { estado } from './estado.js';
 import { abrirFolha, confirmar } from './folha.js';
-import { escaparHtml, dataLocal, toast } from './util.js';
+import { escaparHtml, dataLocal, toast, numero } from './util.js';
 import { salvarPerfil, lerTudo, gravarVarios } from './dados.js';
 import { temaSalvo, definirTema } from './tema.js';
 import { nav } from './nav.js';
+import { metaVolume, metaAgua, formatarVolume } from './metricas.js';
 
-const COLECOES = ['treinos', 'regras', 'sessoes', 'peso', 'checks'];
+const COLECOES = ['treinos', 'regras', 'sessoes', 'peso', 'checks', 'agua'];
 
 async function baixarBackup() {
   try {
@@ -77,6 +78,11 @@ export const perfil = {
       <button class="btn secundario cheio" type="button" data-acao="perfil-nome">Mudar meu nome</button>
     </section>
     <section class="card">
+      <h2>Minhas metas</h2>
+      <p class="mudo peq">Volume por dia: <strong>${metaVolume() ? formatarVolume(metaVolume()) : 'sem meta'}</strong><br>Água por dia: <strong>${metaAgua() ? (metaAgua() / 1000).toLocaleString('pt-BR') + ' L' : 'sem meta'}</strong></p>
+      <button class="btn secundario cheio" type="button" data-acao="metas-editar">Mudar metas</button>
+    </section>
+    <section class="card">
       <h2>Aparência</h2>
       <div class="seg tema" role="group" aria-label="Tema do app">
         ${[['auto', 'Automático'], ['claro', 'Claro'], ['escuro', 'Escuro']].map(([id, nome]) => `<button type="button" aria-pressed="${temaSalvo() === id}" data-acao="tema" data-tema="${id}">${nome}</button>`).join('')}
@@ -118,6 +124,28 @@ export const perfil = {
         if (nome.length < 2) { f.el.querySelector('[data-erro]').textContent = 'Digite seu nome.'; return; }
         salvarPerfil(estado.uid, { nome }, { merge: true });
         f.fechar();
+      });
+    },
+    'metas-editar': () => {
+      const f = abrirFolha(`
+        <h2>Minhas metas</h2>
+        <label class="campo">Volume por dia (kg) — deixe vazio para não ter meta
+          <input class="in" inputmode="numeric" data-f="vol" placeholder="Ex.: o valor que você quiser" value="${metaVolume() || ''}"></label>
+        <label class="campo">Água por dia (litros) — deixe vazio para não ter meta
+          <input class="in" inputmode="decimal" data-f="agua" placeholder="Ex.: 3" value="${metaAgua() ? String(metaAgua() / 1000).replace('.', ',') : ''}"></label>
+        <p class="erro" data-erro role="alert"></p>
+        <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Cancelar</button><button class="btn" type="button" data-ed="salvar">Salvar</button></div>`);
+      f.el.addEventListener('click', (e) => {
+        if (!e.target.closest('[data-ed="salvar"]')) return;
+        const tv = f.el.querySelector('[data-f="vol"]').value.trim();
+        const ta = f.el.querySelector('[data-f="agua"]').value.trim();
+        const v = tv ? numero(tv) : null;
+        const a = ta ? numero(ta) : null;
+        const erro = f.el.querySelector('[data-erro]');
+        if ((tv && (v === null || v <= 0 || v > 1000000)) || (ta && (a === null || a <= 0 || a > 20))) { erro.textContent = 'Digite números válidos (ou deixe vazio).'; return; }
+        salvarPerfil(estado.uid, { metaVolume: v, metaAgua: a === null ? null : Math.round(a * 1000) }, { merge: true });
+        f.fechar();
+        toast('Metas salvas.');
       });
     },
     'backup-baixar': () => baixarBackup(),

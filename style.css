@@ -569,3 +569,20 @@ select.in { appearance: none; -webkit-appearance: none; background-image: linear
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---- Etapa A1: volume, água, calendário ---- */
+.barra { height: 10px; border-radius: 99px; background: var(--borda); overflow: hidden; margin: 8px 0 6px; }
+.barra i { display: block; height: 100%; background: var(--limao); border-radius: 99px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+.t-volume { color: var(--mudo); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.resumo2 { margin: 10px 0 14px; }
+.g-barra { fill: var(--grafico); opacity: .55; }
+.g-barra.g-meta-ok { opacity: 1; }
+.g-tracejado { stroke: var(--destaque); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.cal-titulo { flex: 1; text-align: center; margin: 0; }
+.cal-grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px 6px; margin: 8px 0 10px; text-align: center; }
+.cal-grade b { font-size: 11px; color: var(--mudo); }
+.cal-dia { height: 40px; display: grid; place-items: center; border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--mudo); border: 1px solid transparent; background: none; font-family: inherit; }
+.cal-dia.on { background: var(--limao); color: var(--sobre-limao); box-shadow: var(--brilho); cursor: pointer; }
+.cal-dia.hoje { border-color: var(--destaque); color: var(--texto); }
+.cal-dia.on.hoje { color: var(--sobre-limao); }
+.cal-vazio { height: 40px; }

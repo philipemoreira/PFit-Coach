@@ -11,7 +11,8 @@ export const estado = {
   regras: [],
   sessoes: [],
   peso: [],
-  checks: []
+  checks: [],
+  agua: []
 };
 
 let paradores = [];
@@ -53,6 +54,7 @@ export function iniciarDados(uid, email, aoMudar) {
   ouvir('sessoes', 'sessoes', [orderBy('data', 'desc'), limit(400)]);
   ouvir('peso', 'peso', [orderBy('data', 'desc'), limit(400)]);
   ouvir('checks', 'checks', [orderBy('data', 'desc'), limit(60)]);
+  ouvir('agua', 'agua', [orderBy('data', 'desc'), limit(120)]);
 }
 
 export function pararDados() {
@@ -67,4 +69,5 @@ export function pararDados() {
   estado.sessoes = [];
   estado.peso = [];
   estado.checks = [];
+  estado.agua = [];
 }

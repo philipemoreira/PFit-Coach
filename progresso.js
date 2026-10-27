@@ -6,8 +6,10 @@ import {
 } from './util.js';
 import { salvarDoc, removerDoc } from './dados.js';
 import { nav } from './nav.js';
+import { volumeSessao, volumeDoDia, metaVolume, sequenciaSemanas, formatarVolume } from './metricas.js';
 
 let exercicioEscolhido = '';
+let mesVisto = null; // primeiro dia do mês mostrado no calendário
 const norm = (s) => String(s || '').trim().toLowerCase();
 
 function treinosNoPeriodo() {
@@ -102,6 +104,72 @@ function blocoResumo() {
   </section>`;
 }
 
+function blocoVolume() {
+  const dias = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const str = dataLocal(d);
+    dias.push({ str, v: volumeDoDia(str) });
+  }
+  const meta = metaVolume();
+  const max = Math.max(1, meta || 0, ...dias.map((d) => d.v));
+  const semana = dataLocal(segundaDaSemana());
+  const totalSemana = estado.sessoes.filter((x) => x.data >= semana).reduce((n, x) => n + volumeSessao(x), 0);
+  const W = 320; const H = 120; const base = H - 18;
+  const larg = (W - 10) / 14;
+  const barras = dias.map((d, i) => {
+    const h = Math.round(((base - 6) * d.v) / max);
+    const x = 5 + i * larg;
+    const bateu = meta && d.v >= meta;
+    return `<rect x="${(x + 2).toFixed(1)}" y="${base - h}" width="${(larg - 4).toFixed(1)}" height="${Math.max(h, d.v ? 2 : 0)}" rx="3" class="${bateu ? 'g-barra g-meta-ok' : 'g-barra'}"/>`
+      + (i % 3 === 0 ? `<text x="${(x + larg / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle" class="g-rot">${formatarDataCurta(d.str)}</text>` : '');
+  }).join('');
+  const linhaMeta = meta ? `<line x1="0" x2="${W}" y1="${base - Math.round(((base - 6) * meta) / max)}" y2="${base - Math.round(((base - 6) * meta) / max)}" class="g-tracejado"/>` : '';
+  return `
+  <section class="card">
+    <h2>Volume levantado</h2>
+    <p class="grande">${Math.round(totalSemana).toLocaleString('pt-BR')} <small>kg nesta semana</small></p>
+    <svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Volume dos últimos 14 dias">${linhaMeta}${barras}</svg>
+    <p class="mudo peq">Últimos 14 dias.${meta ? ` Linha tracejada = meta de ${formatarVolume(meta)} por dia; barras acesas bateram a meta.` : ' Defina uma meta no Perfil para ver a linha.'}</p>
+  </section>`;
+}
+
+function blocoCalendario() {
+  const hoje = new Date();
+  if (!mesVisto) mesVisto = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const ano = mesVisto.getFullYear();
+  const mes = mesVisto.getMonth();
+  const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+  const deslocamento = (new Date(ano, mes, 1).getDay() + 6) % 7; // semana começa na segunda
+  const hojeStr = dataLocal();
+  const celulas = [];
+  for (let i = 0; i < deslocamento; i++) celulas.push('<span class="cal-vazio"></span>');
+  for (let d = 1; d <= diasNoMes; d++) {
+    const str = dataLocal(new Date(ano, mes, d));
+    const dosDia = estado.sessoes.filter((x) => x.data === str);
+    const classe = `cal-dia ${dosDia.length ? 'on' : ''} ${str === hojeStr ? 'hoje' : ''}`;
+    celulas.push(dosDia.length
+      ? `<button type="button" class="${classe}" data-acao="cal-dia" data-data="${str}" aria-label="Dia ${d}: ${dosDia.length} treino${dosDia.length === 1 ? '' : 's'}">${d}</button>`
+      : `<span class="${classe}">${d}</span>`);
+  }
+  const treinosMes = estado.sessoes.filter((x) => String(x.data).startsWith(`${ano}-${String(mes + 1).padStart(2, '0')}`));
+  const diasTreinados = new Set(treinosMes.map((x) => x.data)).size;
+  const nomeMes = mesVisto.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const seq = sequenciaSemanas();
+  return `
+  <section class="card">
+    <div class="card-topo">
+      <button class="icone-peq" type="button" data-acao="cal-mes" data-passo="-1" aria-label="Mês anterior">‹</button>
+      <h2 class="cal-titulo">${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}</h2>
+      <button class="icone-peq" type="button" data-acao="cal-mes" data-passo="1" aria-label="Próximo mês">›</button>
+    </div>
+    <div class="cal-grade">${['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((l) => `<b>${l}</b>`).join('')}${celulas.join('')}</div>
+    <p class="mudo peq">${diasTreinados} dia${diasTreinados === 1 ? '' : 's'} treinado${diasTreinados === 1 ? '' : 's'} neste mês.
+    ${seq.semanas > 0 ? `🔥 Sequência: ${seq.semanas} semana${seq.semanas === 1 ? '' : 's'} seguida${seq.semanas === 1 ? '' : 's'} treinando ${seq.alvo} dia${seq.alvo === 1 ? '' : 's'}.` : `Meta da semana: treinar ${seq.alvo} dia${seq.alvo === 1 ? '' : 's'} (os dias que você marcou nos treinos).`}</p>
+  </section>`;
+}
+
 function blocoPeso() {
   const asc = [...estado.peso].sort((a, b) => String(a.data).localeCompare(String(b.data)));
   const ultimo = asc[asc.length - 1];
@@ -156,7 +224,7 @@ function blocoHistorico() {
         const feitas = (s.exercicios || []).reduce((n, e) => n + (e.series || []).filter((x) => x.feito).length, 0);
         return `<button type="button" class="regra-linha" data-acao="sessao-ver" data-id="${escaparHtml(s.id)}">
           <small class="hora">${formatarDataCurta(s.data)}</small>
-          <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${feitas} ${feitas === 1 ? 'série' : 'séries'}${s.duracaoMin ? ` · ${s.duracaoMin} min` : ''}</small></span>
+          <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${feitas} ${feitas === 1 ? 'série' : 'séries'}${s.duracaoMin ? ` · ${s.duracaoMin} min` : ''} · ${Math.round(volumeSessao(s)).toLocaleString('pt-BR')} kg${(s.recordes || []).length ? ' · 🏆' : ''}</small></span>
           <span class="seta" aria-hidden="true">›</span></button>`;
       }).join('')}
     </div>
@@ -167,7 +235,7 @@ export const progresso = {
   render() {
     return `
     <header class="topo"><h1>Progresso</h1></header>
-    ${blocoResumo()}<div class="grade-cards">${blocoPeso()}${blocoExercicio()}</div>${blocoHistorico()}`;
+    ${blocoResumo()}<div class="grade-cards">${blocoCalendario()}${blocoVolume()}${blocoPeso()}${blocoExercicio()}</div>${blocoHistorico()}`;
   },
   mudancas: {
     'prog-exercicio': (el) => {
@@ -176,6 +244,15 @@ export const progresso = {
     }
   },
   acoes: {
+    'cal-mes': (el) => {
+      mesVisto = new Date(mesVisto.getFullYear(), mesVisto.getMonth() + Number(el.dataset.passo), 1);
+      nav.renderizar();
+    },
+    'cal-dia': (el) => {
+      const lista = estado.sessoes.filter((x) => x.data === el.dataset.data);
+      if (lista.length === 1) { progresso.acoes['sessao-ver']({ dataset: { id: lista[0].id } }); return; }
+      abrirFolha(`<h2>${formatarDataCurta(el.dataset.data)}</h2><div class="lista">${lista.map((x) => `<button type="button" class="regra-linha" data-acao="sessao-ver" data-id="${escaparHtml(x.id)}"><span>${escaparHtml(x.treinoNome)}</span><span class="seta" aria-hidden="true">›</span></button>`).join('')}</div><button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`);
+    },
     'peso-novo': () => {
       const f = abrirFolha(`
         <h2>Registrar peso</h2>
@@ -210,6 +287,9 @@ export const progresso = {
       const f = abrirFolha(`
         <h2>${escaparHtml(s.treinoNome)}</h2>
         <p class="mudo peq">${parseData(s.data).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}${s.duracaoMin ? ` · ${s.duracaoMin} min` : ''}</p>
+        <p><strong>${Math.round(volumeSessao(s)).toLocaleString('pt-BR')} kg</strong> <span class="mudo">levantados no treino</span></p>
+        ${(s.recordes || []).length ? `<p class="ultima">🏆 Recordes: ${s.recordes.map((r) => `${escaparHtml(r.nome)} (${formatarNumero(r.carga)} kg)`).join(', ')}</p>` : ''}
+        ${s.nota ? `<p class="obs">${escaparHtml(s.nota)}</p>` : ''}
         ${blocos}
         <div class="linha-botoes"><button class="btn perigo-claro" type="button" data-ed="excluir">Excluir treino feito</button><button class="btn secundario" type="button" data-fechar>Fechar</button></div>`);
       f.el.addEventListener('click', async (e) => {

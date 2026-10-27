@@ -3,6 +3,8 @@ import { estado } from './estado.js';
 import { confirmar } from './folha.js';
 import { escaparHtml, dataLocal, novoId, numero, formatarNumero, formatarDataCurta, formatarDuracao, toast } from './util.js';
 import { salvarDoc } from './dados.js';
+import { abrirFolha } from './folha.js';
+import { volumeDasSeries, maiorCargaAntes, formatarVolume } from './metricas.js';
 import { nav } from './nav.js';
 
 let S = null; // treino em andamento
@@ -44,6 +46,7 @@ export function iniciarTreino(treino) {
     treinoId: treino.id,
     treinoNome: treino.nome,
     inicio: Date.now(),
+    nota: '',
     exercicios: (treino.exercicios || []).map((ex) => {
       const ult = ultimaVez(ex.nome);
       const n = Math.max(1, ex.series || 1);
@@ -57,7 +60,7 @@ export function iniciarTreino(treino) {
           feito: false
         });
       }
-      return { nome: ex.nome, obs: ex.obs || '', descanso: ex.descanso || 0, planoSeries: n, planoReps: ex.reps || '', planoCarga: ex.carga ?? null, ultima: ult, series };
+      return { nome: ex.nome, maxAnt: maiorCargaAntes(ex.nome), obs: ex.obs || '', descanso: ex.descanso || 0, planoSeries: n, planoReps: ex.reps || '', planoCarga: ex.carga ?? null, ultima: ult, series };
     })
   };
   guardar();
@@ -131,13 +134,15 @@ function desenhar() {
   cont.innerHTML = `
     <div class="treinar-topo">
       <button class="icone-btn" type="button" data-t="cancelar" aria-label="Sair do treino sem salvar">✕</button>
-      <div class="treinar-titulo"><strong>${escaparHtml(S.treinoNome)}</strong><span id="t-relogio">${formatarDuracao((Date.now() - S.inicio) / 1000)}</span></div>
+      <div class="treinar-titulo"><strong>${escaparHtml(S.treinoNome)}</strong><span id="t-relogio">${formatarDuracao((Date.now() - S.inicio) / 1000)}</span><small id="t-volume" class="t-volume">${formatarVolume(volumeAtual())}</small></div>
       <button class="btn pequeno" type="button" data-t="finalizar">Finalizar</button>
     </div>
-    <div class="treinar-corpo">${S.exercicios.map(cartaoExercicio).join('')}<div class="espaco-descanso"></div></div>`;
+    <div class="treinar-corpo">${S.exercicios.map(cartaoExercicio).join('')}<section class="ex-card"><h3>Anotação do treino</h3><textarea class="in" data-t="nota" rows="3" maxlength="500" placeholder="Como foi? Dor, energia, o que ajustar…">${escaparHtml(S.nota || '')}</textarea></section><div class="espaco-descanso"></div></div>`;
   const novo = cont.querySelector('.treinar-corpo');
   if (novo) novo.scrollTop = y;
 }
+
+const volumeAtual = () => volumeDasSeries(S.exercicios.map((e) => ({ series: e.series.map((x) => ({ carga: numero(x.carga), reps: numero(x.reps), feito: x.feito })) })));
 
 function atualizarRelogio() {
   const el = raiz && raiz.querySelector('#t-relogio');
@@ -146,9 +151,13 @@ function atualizarRelogio() {
 
 function aoDigitar(e) {
   const t = e.target;
-  if (!t.dataset || (t.dataset.t !== 'carga' && t.dataset.t !== 'reps')) return;
+  if (!t.dataset) return;
+  if (t.dataset.t === 'nota') { S.nota = t.value; guardar(); return; }
+  if (t.dataset.t !== 'carga' && t.dataset.t !== 'reps') return;
   S.exercicios[Number(t.dataset.e)].series[Number(t.dataset.s)][t.dataset.t] = t.value;
   guardar();
+  const v = raiz.querySelector('#t-volume');
+  if (v) v.textContent = formatarVolume(volumeAtual());
 }
 
 function aoClicar(e) {
@@ -162,6 +171,9 @@ function aoClicar(e) {
     guardar();
     desenhar();
     if (s.feito) {
+      const ex0 = S.exercicios[i];
+      const c = numero(s.carga);
+      if (c != null && ex0.maxAnt != null && c > ex0.maxAnt && !ex0.recorde) { ex0.recorde = true; guardar(); toast(`🏆 Recorde pessoal em ${ex0.nome}: ${formatarNumero(c)} kg!`); }
       const botao = raiz.querySelector(`[data-t="check"][data-e="${i}"][data-s="${b.dataset.s}"]`);
       if (botao) botao.classList.add('pop');
       destravarAudio();
@@ -292,21 +304,45 @@ async function finalizar() {
     if (!(await confirmar(`Faltam ${total - feitas} série(s) sem marcar. Finalizar mesmo assim?`, { ok: 'Finalizar' }))) return;
   }
   const fim = Date.now();
+  const exercicios = S.exercicios.map((e) => ({
+    nome: e.nome,
+    obs: e.obs || null,
+    series: e.series.map((x) => ({ carga: numero(x.carga), reps: numero(x.reps), feito: x.feito }))
+  }));
+  const volume = volumeDasSeries(exercicios);
+  // Recorde = carga maior que qualquer uma já feita antes naquele exercício (só vale se já existia histórico).
+  const recordes = [];
+  S.exercicios.forEach((e, i) => {
+    const cargas = exercicios[i].series.filter((x) => x.feito && x.carga != null).map((x) => x.carga);
+    const max = cargas.length ? Math.max(...cargas) : null;
+    if (max != null && e.maxAnt != null && max > e.maxAnt) recordes.push({ nome: e.nome, carga: max });
+  });
+  const duracaoMin = Math.max(1, Math.round((fim - S.inicio) / 60000));
   const sessao = {
     data: dataLocal(new Date(S.inicio)),
     treinoId: S.treinoId,
     treinoNome: S.treinoNome,
     inicio: new Date(S.inicio).toISOString(),
     fim: new Date(fim).toISOString(),
-    duracaoMin: Math.max(1, Math.round((fim - S.inicio) / 60000)),
-    exercicios: S.exercicios.map((e) => ({
-      nome: e.nome,
-      obs: e.obs || null,
-      series: e.series.map((s) => ({ carga: numero(s.carga), reps: numero(s.reps), feito: s.feito }))
-    })),
+    duracaoMin,
+    volume,
+    nota: (S.nota || '').trim() || null,
+    recordes,
+    exercicios,
     criadoEm: new Date().toISOString()
   };
   salvarDoc(estado.uid, 'sessoes', novoId(), sessao);
   fechar();
-  toast(`Treino salvo: ${feitas} série${feitas === 1 ? '' : 's'} feita${feitas === 1 ? '' : 's'}.`);
+  const avisoAntigo = document.getElementById('toast');
+  if (avisoAntigo) avisoAntigo.classList.remove('ver');
+  const f = abrirFolha(`
+    <h2>Treino salvo 💪</h2>
+    <div class="resumo resumo2">
+      <div class="num-card"><strong>${escaparHtml(Math.round(volume).toLocaleString('pt-BR'))}</strong><span>kg levantados</span></div>
+      <div class="num-card"><strong>${feitas}</strong><span>série${feitas === 1 ? '' : 's'} feita${feitas === 1 ? '' : 's'}</span></div>
+      <div class="num-card"><strong>${duracaoMin}</strong><span>minutos</span></div>
+    </div>
+    ${recordes.length ? `<div class="card destaque"><h3>🏆 Novo${recordes.length === 1 ? '' : 's'} recorde${recordes.length === 1 ? '' : 's'}</h3>${recordes.map((r) => `<p>${escaparHtml(r.nome)}: <strong>${formatarNumero(r.carga)} kg</strong></p>`).join('')}</div>` : ''}
+    <button class="btn cheio" type="button" data-fechar>Fechar</button>`);
+  return f;
 }
