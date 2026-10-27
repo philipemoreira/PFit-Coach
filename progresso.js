@@ -156,7 +156,7 @@ function blocoHistorico() {
         const feitas = (s.exercicios || []).reduce((n, e) => n + (e.series || []).filter((x) => x.feito).length, 0);
         return `<button type="button" class="regra-linha" data-acao="sessao-ver" data-id="${escaparHtml(s.id)}">
           <small class="hora">${formatarDataCurta(s.data)}</small>
-          <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${feitas} séries${s.duracaoMin ? ` · ${s.duracaoMin} min` : ''}</small></span>
+          <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${feitas} ${feitas === 1 ? 'série' : 'séries'}${s.duracaoMin ? ` · ${s.duracaoMin} min` : ''}</small></span>
           <span class="seta" aria-hidden="true">›</span></button>`;
       }).join('')}
     </div>
@@ -167,7 +167,7 @@ export const progresso = {
   render() {
     return `
     <header class="topo"><h1>Progresso</h1></header>
-    ${blocoResumo()}${blocoPeso()}${blocoExercicio()}${blocoHistorico()}`;
+    ${blocoResumo()}<div class="grade-cards">${blocoPeso()}${blocoExercicio()}</div>${blocoHistorico()}`;
   },
   mudancas: {
     'prog-exercicio': (el) => {

@@ -1,6 +1,6 @@
 // Guarda os arquivos do app no aparelho para ele abrir rápido e funcionar sem internet.
 // Toda vez que eu mudar o app, o número da versão sobe (NOME_DO_CACHE).
-const NOME_DO_CACHE = 'treino-v2';
+const NOME_DO_CACHE = 'treino-v3';
 
 const ARQUIVOS_ESSENCIAIS = [
   './', './index.html', './style.css', './manifest.json',

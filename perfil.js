@@ -71,6 +71,7 @@ export const perfil = {
     </section>
     ${personal ? `<section class="card destaque"><p><strong>Área do personal em construção.</strong></p>
       <p class="mudo">Convidar alunos e montar treinos para eles chega na próxima fase. Por enquanto você usa o app como aluno.</p></section>` : ''}
+    <div class="grade-cards">
     <section class="card">
       <h2>Conta</h2>
       <button class="btn secundario cheio" type="button" data-acao="perfil-nome">Mudar meu nome</button>
@@ -89,6 +90,7 @@ export const perfil = {
       <button class="btn secundario cheio" type="button" data-acao="backup-restaurar">Restaurar backup</button>
       <input type="file" id="arq-backup" accept="application/json,.json" hidden data-mudar="backup-arquivo">
     </section>
+    </div>
     <button class="btn perigo-claro cheio" type="button" data-acao="sair">Sair da conta</button>
     <p class="aviso-rodape">Treino · versão 1</p>`;
   },

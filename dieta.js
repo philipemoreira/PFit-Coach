@@ -105,7 +105,7 @@ export const dieta = {
     return `
     <header class="topo"><h1>Dieta</h1></header>
     <p class="mudo peq margem-b">Suas regras de alimentação. Na aba Hoje você marca o que cumpriu no dia.</p>
-    ${GRUPOS.map(blocoGrupo).join('')}
+    <div class="grade-cards">${GRUPOS.map(blocoGrupo).join('')}</div>
     <p class="aviso-rodape">Este app organiza a sua dieta, mas não substitui nutricionista nem médico.</p>`;
   },
   acoes: {

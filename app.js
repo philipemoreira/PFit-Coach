@@ -58,6 +58,7 @@ function montarPrincipal() {
     <div class="shell">
       <main id="conteudo" class="conteudo" tabindex="-1"></main>
       <nav class="nav" aria-label="Menu principal">
+        <div class="nav-marca" aria-hidden="true"><svg viewBox="0 0 512 512"><rect width="512" height="512" rx="110" fill="#181b22"/><g fill="#c6f432"><rect x="196" y="236" width="120" height="40" rx="8"/><rect x="150" y="176" width="46" height="160" rx="14"/><rect x="316" y="176" width="46" height="160" rx="14"/><rect x="108" y="206" width="34" height="100" rx="12"/><rect x="370" y="206" width="34" height="100" rx="12"/></g></svg><b>Treino</b></div>
         ${ABAS.map((a) => `<button type="button" class="nav-btn" data-acao="aba" data-aba="${a.id}" aria-label="${a.nome}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONES[a.id]}</svg><span>${a.nome}</span></button>`).join('')}
       </nav>
     </div>`;
@@ -138,6 +139,17 @@ document.addEventListener('submit', (e) => {
   if (f) f(form);
 });
 
+// Brilho que acompanha o mouse nos cartões (só em computador com mouse).
+if (window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+  document.addEventListener('mousemove', (e) => {
+    const alvo = e.target.closest && e.target.closest('.card, .tile, .hero-treino, .ex-card, .num-card');
+    if (!alvo) return;
+    const r = alvo.getBoundingClientRect();
+    alvo.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    alvo.style.setProperty('--my', `${e.clientY - r.top}px`);
+  }, { passive: true });
+}
+
 // Quando o app volta para a frente num dia novo, atualiza "hoje".
 let diaVisto = new Date().toDateString();
 document.addEventListener('visibilitychange', () => {
@@ -154,6 +166,7 @@ if (!configurado) {
   onAuthStateChanged(auth, (usuario) => {
     if (usuario) {
       iniciarDados(usuario.uid, usuario.email, aoMudarDados);
+      estado.nomeSugerido = usuario.displayName || '';
     } else {
       pararDados();
     }

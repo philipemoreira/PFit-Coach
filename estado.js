@@ -4,6 +4,7 @@ import { db, onSnapshot, collection, doc, query, orderBy, limit } from './fireba
 export const estado = {
   uid: null,
   email: '',
+  nomeSugerido: '',
   perfil: undefined, // undefined = ainda carregando | null = não existe | objeto = existe
   criandoConta: false,
   treinos: [],
@@ -59,6 +60,7 @@ export function pararDados() {
   paradores = [];
   estado.uid = null;
   estado.email = '';
+  estado.nomeSugerido = '';
   estado.perfil = undefined;
   estado.treinos = [];
   estado.regras = [];

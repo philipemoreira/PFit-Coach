@@ -150,7 +150,7 @@ export const treinos = {
     const lista = estado.treinos.map(cardTreino).join('');
     return `
     <header class="topo"><h1>Treinos</h1><button class="btn pequeno" type="button" data-acao="treino-novo">+ Novo</button></header>
-    ${lista || `<div class="vazio">
+    ${lista ? `<div class="grade-cards">${lista}</div>` : `<div class="vazio">
       <p><strong>Você ainda não tem treinos.</strong></p>
       <p class="mudo">Crie o primeiro, por exemplo o Treino A, com os exercícios, séries e repetições.</p>
       <button class="btn" type="button" data-acao="treino-novo">Criar meu primeiro treino</button>
