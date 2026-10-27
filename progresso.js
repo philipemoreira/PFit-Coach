@@ -116,7 +116,7 @@ function blocoVolume() {
   const max = Math.max(1, meta || 0, ...dias.map((d) => d.v));
   const semana = dataLocal(segundaDaSemana());
   const totalSemana = estado.sessoes.filter((x) => x.data >= semana).reduce((n, x) => n + volumeSessao(x), 0);
-  const W = 320; const H = 120; const base = H - 18;
+  const W = 320; const H = 150; const base = H - 18;
   const larg = (W - 10) / 14;
   const barras = dias.map((d, i) => {
     const h = Math.round(((base - 6) * d.v) / max);
@@ -130,7 +130,9 @@ function blocoVolume() {
   <section class="card">
     <h2>Volume levantado</h2>
     <p class="grande">${Math.round(totalSemana).toLocaleString('pt-BR')} <small>kg nesta semana</small></p>
-    <svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Volume dos últimos 14 dias">${linhaMeta}${barras}</svg>
+    ${dias.some((x) => x.v > 0)
+    ? `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Volume dos últimos 14 dias">${linhaMeta}${barras}</svg>`
+    : '<p class="mudo vazio-grafico">Quando você terminar um treino com carga e repetições, as barras aparecem aqui.</p>'}
     <p class="mudo peq">Últimos 14 dias.${meta ? ` Linha tracejada = meta de ${formatarVolume(meta)} por dia; barras acesas bateram a meta.` : ' Defina uma meta no Perfil para ver a linha.'}</p>
   </section>`;
 }
@@ -183,7 +185,7 @@ function blocoPeso() {
     <div class="card-topo"><h2>Peso corporal</h2><button class="btn pequeno" type="button" data-acao="peso-novo">+ Registrar</button></div>
     ${ultimo ? `<p class="grande">${formatarNumero(ultimo.kg)} <small>kg</small></p>
       ${dif !== null ? `<p class="mudo peq">${dif > 0 ? '+' : ''}${formatarNumero(dif)} kg desde o primeiro registro</p>` : ''}`
-      : '<p class="mudo">Nenhum peso registrado ainda.</p>'}
+      : '<p class="mudo vazio-grafico">Nenhum peso registrado ainda.<br>Toque em “+ Registrar” para começar.</p>'}
     ${grafico(asc.slice(-30).map((p) => ({ rot: formatarDataCurta(p.data), v: p.kg })), 'kg') || (asc.length === 1 ? '<p class="mudo peq">Registre de novo outro dia para ver o gráfico.</p>' : '')}
     ${lista ? `<div class="lista-peso">${lista}</div>` : ''}
   </section>`;
@@ -192,7 +194,7 @@ function blocoPeso() {
 function blocoExercicio() {
   const lista = exerciciosComCarga();
   if (!lista.length) {
-    return `<section class="card"><h2>Carga por exercício</h2><p class="mudo">Quando você terminar treinos com carga marcada, a evolução de cada exercício aparece aqui.</p></section>`;
+    return `<section class="card"><h2>Carga por exercício</h2><p class="mudo vazio-grafico">Quando você terminar treinos com carga marcada, a evolução de cada exercício aparece aqui.</p></section>`;
   }
   if (!lista.some(([k]) => k === exercicioEscolhido)) exercicioEscolhido = lista[0][0];
   const pontos = pontosExercicio(exercicioEscolhido);

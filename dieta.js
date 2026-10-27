@@ -46,7 +46,7 @@ function blocoGrupo(g) {
       ${hoje ? '<span class="selo">vale hoje</span>' : ''}
     </div>
     ${regras.length ? `<div class="lista">${regras.map(linhaRegra).join('')}</div>` : '<p class="mudo vazio-peq">Nenhuma regra ainda.</p>'}
-    <button class="btn secundario cheio" type="button" data-acao="regra-nova" data-grupo="${g.id}">+ Adicionar regra</button>
+    <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="regra-nova" data-grupo="${g.id}">+ Adicionar regra</button></div>
   </section>`;
 }
 
@@ -105,7 +105,7 @@ export const dieta = {
     return `
     <header class="topo"><h1>Dieta</h1></header>
     <p class="mudo peq margem-b">Suas regras de alimentação. Na aba Hoje você marca o que cumpriu no dia.</p>
-    <div class="grade-cards">${GRUPOS.map(blocoGrupo).join('')}</div>
+    <div class="grade-cards tres">${GRUPOS.map(blocoGrupo).join('')}</div>
     <p class="aviso-rodape">Este app organiza a sua dieta, mas não substitui nutricionista nem médico.</p>`;
   },
   acoes: {

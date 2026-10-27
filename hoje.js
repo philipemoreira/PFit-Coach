@@ -64,7 +64,7 @@ function blocoHero() {
     <div class="treino-dia">
       <div>
         <strong>${escaparHtml(t.nome)}</strong>
-        <p>${(t.exercicios || []).length} exercícios${feitos.has(t.id) ? ' · <span class="ok-txt">feito hoje ✔</span>' : ''}</p>
+        <p>${(t.exercicios || []).length} exercício${(t.exercicios || []).length === 1 ? '' : 's'}${feitos.has(t.id) ? ' · <span class="ok-txt">feito hoje ✔</span>' : ''}</p>
       </div>
       <button class="btn pequeno escuro" type="button" data-acao="treino-iniciar" data-id="${escaparHtml(t.id)}">${feitos.has(t.id) ? 'Repetir' : 'Iniciar'}</button>
     </div>`).join('');
@@ -115,14 +115,14 @@ function blocoDia() {
   <section class="card">
     <div class="card-topo"><h2>Volume de hoje</h2>${mv && vol >= mv ? '<span class="selo">meta batida 🎉</span>' : ''}</div>
     <p class="grande">${Math.round(vol).toLocaleString('pt-BR')} <small>kg</small></p>
-    ${mv ? `${barra(vol, mv)}<p class="mudo peq">Meta do dia: ${formatarVolume(mv)}</p>`
+    ${mv ? `${barra(vol, mv)}<p class="mudo peq">Meta do dia: ${formatarVolume(mv)}${vol < mv ? ` · faltam ${formatarVolume(mv - vol)}` : ''}</p>`
       : '<p class="mudo peq">Soma de carga × repetições dos seus treinos. <button class="link" type="button" data-acao="metas-editar">Definir meta</button></p>'}
   </section>
   <section class="card">
     <div class="card-topo"><h2>Água</h2><span class="selo">${seq.semanas > 0 ? `🔥 ${seq.semanas} sem. seguida${seq.semanas === 1 ? '' : 's'}` : 'sem sequência ainda'}</span></div>
     <p class="grande">${(ml / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} <small>litros</small></p>
-    ${ma ? `${barra(ml, ma)}<p class="mudo peq">Meta: ${(ma / 1000).toLocaleString('pt-BR')} L</p>` : '<p class="mudo peq"><button class="link" type="button" data-acao="metas-editar">Definir meta de água</button></p>'}
-    <div class="linha-botoes"><button class="btn secundario" type="button" data-acao="agua-menos" aria-label="Tirar um copo">− Copo</button><button class="btn" type="button" data-acao="agua-mais" aria-label="Adicionar um copo de 250 mililitros">+ Copo (250 ml)</button></div>
+    ${ma ? `${barra(ml, ma)}<p class="mudo peq">Meta: ${(ma / 1000).toLocaleString('pt-BR')} L · 1 copo = 250 ml</p>` : '<p class="mudo peq">1 copo = 250 ml. <button class="link" type="button" data-acao="metas-editar">Definir meta</button></p>'}
+    <div class="acoes-card linha"><button class="btn secundario" type="button" data-acao="agua-menos" aria-label="Tirar um copo">− Copo</button><button class="btn" type="button" data-acao="agua-mais" aria-label="Adicionar um copo de 250 mililitros">+ Copo</button></div>
   </section>
   </div>`;
 }

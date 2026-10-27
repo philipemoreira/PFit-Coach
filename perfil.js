@@ -74,30 +74,37 @@ export const perfil = {
       <p class="mudo">Convidar alunos e montar treinos para eles chega na próxima fase. Por enquanto você usa o app como aluno.</p></section>` : ''}
     <div class="grade-cards">
     <section class="card">
-      <h2>Conta</h2>
-      <button class="btn secundario cheio" type="button" data-acao="perfil-nome">Mudar meu nome</button>
-    </section>
-    <section class="card">
       <h2>Minhas metas</h2>
       <p class="mudo peq">Volume por dia: <strong>${metaVolume() ? formatarVolume(metaVolume()) : 'sem meta'}</strong><br>Água por dia: <strong>${metaAgua() ? (metaAgua() / 1000).toLocaleString('pt-BR') + ' L' : 'sem meta'}</strong></p>
-      <button class="btn secundario cheio" type="button" data-acao="metas-editar">Mudar metas</button>
+      <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="metas-editar">Mudar metas</button></div>
     </section>
     <section class="card">
       <h2>Aparência</h2>
-      <div class="seg tema" role="group" aria-label="Tema do app">
-        ${[['auto', 'Automático'], ['claro', 'Claro'], ['escuro', 'Escuro']].map(([id, nome]) => `<button type="button" aria-pressed="${temaSalvo() === id}" data-acao="tema" data-tema="${id}">${nome}</button>`).join('')}
+      <p class="mudo peq">Automático acompanha o modo claro ou escuro do seu aparelho.</p>
+      <div class="acoes-card">
+        <div class="seg tema" role="group" aria-label="Tema do app">
+          ${[['auto', 'Automático'], ['claro', 'Claro'], ['escuro', 'Escuro']].map(([id, nome]) => `<button type="button" aria-pressed="${temaSalvo() === id}" data-acao="tema" data-tema="${id}">${nome}</button>`).join('')}
+        </div>
       </div>
-      <p class="mudo peq" style="margin-top:10px">Automático acompanha o modo claro ou escuro do seu celular.</p>
     </section>
     <section class="card">
       <h2>Seus dados</h2>
       <p class="mudo peq">O backup é um arquivo com seus treinos, dieta, histórico e peso. Guarde onde quiser.</p>
-      <button class="btn secundario cheio" type="button" data-acao="backup-baixar">Salvar backup</button>
-      <button class="btn secundario cheio" type="button" data-acao="backup-restaurar">Restaurar backup</button>
       <input type="file" id="arq-backup" accept="application/json,.json" hidden data-mudar="backup-arquivo">
+      <div class="acoes-card">
+        <button class="btn secundario cheio" type="button" data-acao="backup-baixar">Salvar backup</button>
+        <button class="btn secundario cheio" type="button" data-acao="backup-restaurar">Restaurar backup</button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Conta</h2>
+      <p class="mudo peq">Nome, e-mail e saída da conta.</p>
+      <div class="acoes-card">
+        <button class="btn secundario cheio" type="button" data-acao="perfil-nome">Mudar meu nome</button>
+        <button class="btn perigo-claro cheio" type="button" data-acao="sair">Sair da conta</button>
+      </div>
     </section>
     </div>
-    <button class="btn perigo-claro cheio" type="button" data-acao="sair">Sair da conta</button>
     <p class="aviso-rodape">Treino · versão 1</p>`;
   },
   mudancas: {
