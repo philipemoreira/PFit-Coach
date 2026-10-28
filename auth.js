@@ -214,7 +214,7 @@ export const formsAuth = {
     estado.criandoConta = true;
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, senha);
-      salvarPerfil(cred.user.uid, { nome, papel, email, criadoEm: new Date().toISOString() });
+      salvarPerfil(cred.user.uid, { nome, papel, email, criadoEm: new Date().toISOString(), viuBoasVindas: false });
     } catch (e) {
       erroNoForm(form, traduzir(e));
       travar(form, false);
@@ -227,6 +227,6 @@ export const formsAuth = {
     const papel = form.elements.papel.value === 'personal' ? 'personal' : 'aluno';
     if (nome.length < 2) return erroNoForm(form, 'Digite seu nome.');
     travar(form, true);
-    salvarPerfil(estado.uid, { nome, papel, email: estado.email, criadoEm: new Date().toISOString() });
+    salvarPerfil(estado.uid, { nome, papel, email: estado.email, criadoEm: new Date().toISOString(), viuBoasVindas: false });
   }
 };

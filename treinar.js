@@ -7,6 +7,7 @@ import { abrirFolha } from './folha.js';
 import { volumeDasSeries, maiorCargaAntes, formatarVolume } from './metricas.js';
 import { abrirAnilhas } from './anilhas.js';
 import { nav } from './nav.js';
+import { dicaDoExercicio } from './dicas.js';
 
 let S = null; // treino em andamento
 let raiz = null;
@@ -146,7 +147,7 @@ function cartaoExercicio(ex, i) {
   const ultima = textoUltima(ex);
   return `
   <section class="ex-card">
-    <h3>${escaparHtml(ex.nome)}</h3>
+    <h3>${escaparHtml(ex.nome)}${dicaDoExercicio(ex.nome) ? ` <button type="button" class="icone-info" data-t="dica" data-e="${i}" aria-label="Como fazer ${escaparHtml(ex.nome)}">?</button>` : ''}</h3>
     <p class="mudo peq">${escaparHtml(textoPlano(ex))}</p>
     ${ultima ? `<p class="ultima">${escaparHtml(ultima)}</p>` : ''}
     ${ex.obs ? `<p class="obs">${escaparHtml(ex.obs)}</p>` : ''}
@@ -210,6 +211,9 @@ function aoClicar(e) {
   } else if (acao === 'cardio-check') {
     S.exercicios[i].feito = !S.exercicios[i].feito;
     guardar(); desenhar();
+  } else if (acao === 'dica') {
+    const d = dicaDoExercicio(S.exercicios[i].nome);
+    if (d) abrirFolha(`<h2>${escaparHtml(d.nome)}</h2><span class="selo">${escaparHtml(d.grupo)}</span><h3 class="sub">Como fazer</h3><p>${escaparHtml(d.texto)}</p><p class="mudo peq">Dica geral. Se sentir dor (não é o cansaço normal do músculo), pare e procure um profissional. Seu personal pode ajustar a execução para você.</p><button class="btn cheio" type="button" data-fechar>Fechar</button>`);
   } else if (acao === 'anilhas') {
     const ex = S.exercicios[i];
     const ref = ex.series.map((x) => numero(x.carga)).find((c) => c != null);

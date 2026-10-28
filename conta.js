@@ -12,7 +12,7 @@ const SUBCOLECOES = ['treinos', 'regras', 'checks', 'sessoes', 'peso', 'agua', '
 
 export function abrirPrivacidade() {
   abrirFolha(`
-    <h2>Privacidade e termos</h2>
+    <h2>Privacidade</h2>
     <div class="texto-legal">
       <p class="mudo peq">Resumo em linguagem simples. Este texto é um modelo e precisa ser revisado por um profissional antes de o app ser aberto ao público.</p>
       <h3>Quais dados o app guarda</h3>
@@ -27,6 +27,30 @@ export function abrirPrivacidade() {
       <p>Você pode salvar uma cópia dos seus dados (Perfil → Salvar backup), corrigir o que quiser dentro do app e <strong>excluir sua conta e todos os seus dados</strong> (Perfil → Conta → Excluir minha conta).</p>
       <h3>Aviso de saúde</h3>
       <p>O app organiza treino e dieta, mas não substitui médico, nutricionista ou profissional de educação física. Em caso de dor, mal-estar ou dúvida, procure um profissional.</p>
+      ${CONTATO ? `<h3>Contato</h3><p>${CONTATO}</p>` : ''}
+    </div>
+    <button class="btn cheio" type="button" data-fechar>Fechar</button>`, { classe: 'folha-alta' });
+}
+
+export function abrirTermos() {
+  abrirFolha(`
+    <h2>Termos de uso</h2>
+    <div class="texto-legal">
+      <p class="mudo peq">Modelo em linguagem simples. Precisa ser revisado por um profissional antes de o app ser aberto ao público.</p>
+      <h3>O que é o app</h3>
+      <p>O Treino ajuda você a organizar treinos, dieta e acompanhamento do seu progresso, sozinho ou com um personal.</p>
+      <h3>Sua conta</h3>
+      <p>Você é responsável por manter sua senha em segurança e por informar dados verdadeiros. Cada conta é pessoal.</p>
+      <h3>Assinatura</h3>
+      <p>Toda conta tem um período grátis de 30 dias. Depois, o uso depende de assinatura ativa. Alunos conectados a um personal usam enquanto o plano do personal estiver em dia. Quando a assinatura vence, o acesso para alterar dados é pausado, mas seus dados continuam guardados e você pode salvar um backup ou excluir a conta.</p>
+      <h3>Uso adequado</h3>
+      <p>Não use o app para fins ilegais, nem tente acessar dados de outras pessoas. Contas que violem isso podem ser bloqueadas.</p>
+      <h3>Saúde</h3>
+      <p>O app não é aconselhamento médico, nutricional ou de educação física. Treino e dieta têm riscos: procure um profissional de saúde antes de começar ou mudar sua rotina. Você usa o app por sua conta e risco.</p>
+      <h3>Personal e aluno</h3>
+      <p>O personal é responsável pelo treino e pela dieta que monta para seus alunos. O app é só a ferramenta.</p>
+      <h3>Mudanças</h3>
+      <p>Estes termos podem mudar. Mudanças importantes serão avisadas no app.</p>
       ${CONTATO ? `<h3>Contato</h3><p>${CONTATO}</p>` : ''}
     </div>
     <button class="btn cheio" type="button" data-fechar>Fechar</button>`, { classe: 'folha-alta' });

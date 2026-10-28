@@ -7,7 +7,8 @@ import { salvarPerfil, lerTudo, gravarVarios, salvarGlobal, removerGlobal } from
 import { temaSalvo, definirTema } from './tema.js';
 import { nav } from './nav.js';
 import { metaVolume, metaAgua, metaPeso, metaMacros, formatarVolume } from './metricas.js';
-import { abrirPrivacidade, abrirExclusao } from './conta.js';
+import { abrirPrivacidade, abrirTermos, abrirExclusao } from './conta.js';
+import { abrirAjuda } from './ajuda.js';
 import { blocoAssinatura } from './assinatura.js';
 
 const COLECOES = ['treinos', 'regras', 'sessoes', 'peso', 'checks', 'agua', 'medidas', 'alimentos', 'refeicoes'];
@@ -84,14 +85,20 @@ function cartaoPersonal(souPersonal) {
   </section>`;
 }
 
+const secao = (titulo, sub, cards) => `
+    <section class="secao">
+      <div class="secao-cab"><h2>${titulo}</h2>${sub ? `<p>${sub}</p>` : ''}</div>
+      <div class="grade-cards">${cards}</div>
+    </section>`;
+
 export const perfil = {
   render() {
     const p = estado.perfil || {};
     const personal = p.papel === 'personal';
     const inicial = (p.nome || '?').trim().charAt(0).toUpperCase();
+    const m = metaMacros();
     return `
     <header class="topo"><h1>Perfil</h1></header>
-    ${blocoAssinatura()}
     <section class="card perfil-topo">
       <div class="avatar" aria-hidden="true">${escaparHtml(inicial)}</div>
       <div>
@@ -99,44 +106,66 @@ export const perfil = {
         <p class="mudo peq">${escaparHtml(estado.email)}</p>
         <span class="selo">${personal ? 'Conta de personal' : 'Conta de aluno'}</span>
       </div>
+      <button class="btn pequeno secundario perfil-editar" type="button" data-acao="perfil-nome">Editar nome</button>
     </section>
-    <div class="grade-cards">
-    ${cartaoPersonal(personal)}
+    ${blocoAssinatura()}
+    ${secao(personal ? 'Personal e alunos' : 'Meu personal', personal ? 'Sua conta de personal e a conexão com seu próprio personal, se tiver.' : 'Conecte-se ao seu personal para ele montar seu treino e sua dieta.', cartaoPersonal(personal))}
+    ${secao('Metas e aparência', 'O que você quer alcançar e como o app aparece.', `
     <section class="card">
       <h2>Minhas metas</h2>
       ${estado.vinculo ? '<p class="mudo peq">Definidas pelo seu personal.</p>' : ''}
-      <p class="mudo peq">Volume por dia: <strong>${metaVolume() ? formatarVolume(metaVolume()) : 'sem meta'}</strong><br>Água por dia: <strong>${metaAgua() ? (metaAgua() / 1000).toLocaleString('pt-BR') + ' L' : 'sem meta'}</strong><br>Peso desejado: <strong>${metaPeso() ? metaPeso().toLocaleString('pt-BR') + ' kg' : 'sem meta'}</strong><br>Calorias por dia: <strong>${metaMacros().kcal ? metaMacros().kcal.toLocaleString('pt-BR') + ' kcal' : 'sem meta'}</strong><br>Proteína · carbo · gordura: <strong>${['prot', 'carb', 'gord'].map((k) => (metaMacros()[k] ? metaMacros()[k] + ' g' : '—')).join(' · ')}</strong></p>
+      <div class="lista-metas">
+        <div><span>Volume por dia</span><strong>${metaVolume() ? formatarVolume(metaVolume()) : 'sem meta'}</strong></div>
+        <div><span>Água por dia</span><strong>${metaAgua() ? (metaAgua() / 1000).toLocaleString('pt-BR') + ' L' : 'sem meta'}</strong></div>
+        <div><span>Peso desejado</span><strong>${metaPeso() ? metaPeso().toLocaleString('pt-BR') + ' kg' : 'sem meta'}</strong></div>
+        <div><span>Calorias por dia</span><strong>${m.kcal ? m.kcal.toLocaleString('pt-BR') + ' kcal' : 'sem meta'}</strong></div>
+        <div><span>Proteína · carbo · gordura</span><strong>${['prot', 'carb', 'gord'].map((k) => (m[k] ? m[k] + ' g' : '—')).join(' · ')}</strong></div>
+      </div>
       ${estado.vinculo ? '' : '<div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="metas-editar">Mudar metas</button></div>'}
     </section>
     <section class="card">
       <h2>Aparência</h2>
       <p class="mudo peq">Automático acompanha o modo claro ou escuro do seu aparelho.</p>
-      <div class="acoes-card">
+      <div class="acoes-card sem-auto">
         <div class="seg tema" role="group" aria-label="Tema do app">
           ${[['auto', 'Automático'], ['claro', 'Claro'], ['escuro', 'Escuro']].map(([id, nome]) => `<button type="button" aria-pressed="${temaSalvo() === id}" data-acao="tema" data-tema="${id}">${nome}</button>`).join('')}
         </div>
       </div>
-    </section>
+    </section>`)}
+    ${secao('Seus dados', 'Guarde uma cópia ou apague tudo quando quiser.', `
     <section class="card">
-      <h2>Seus dados</h2>
-      <p class="mudo peq">O backup é um arquivo com seus treinos, dieta, histórico, peso, medidas e alimentos. Guarde onde quiser. (As fotos não entram no backup.)</p>
+      <h2>Backup</h2>
+      <p class="mudo peq">Um arquivo com seus treinos, dieta, histórico, peso, medidas e alimentos. Guarde onde quiser. (As fotos não entram no backup.)</p>
       <input type="file" id="arq-backup" accept="application/json,.json" hidden data-mudar="backup-arquivo">
       <div class="acoes-card">
         <button class="btn secundario cheio" type="button" data-acao="backup-baixar">Salvar backup</button>
         <button class="btn secundario cheio" type="button" data-acao="backup-restaurar">Restaurar backup</button>
       </div>
     </section>
-    <section class="card larga">
+    <section class="card">
+      <h2>Privacidade e termos</h2>
+      <p class="mudo peq">Como seus dados são usados e as regras do app.</p>
+      <div class="acoes-card">
+        <button class="btn secundario cheio" type="button" data-acao="privacidade">Privacidade</button>
+        <button class="btn secundario cheio" type="button" data-acao="termos">Termos de uso</button>
+      </div>
+    </section>`)}
+    ${secao('Ajuda e conta', 'Tire dúvidas, saia ou exclua sua conta.', `
+    <section class="card">
+      <h2>Ajuda</h2>
+      <p class="mudo peq">Como usar cada parte do app, instalar no celular e falar com o suporte.</p>
+      <div class="acoes-card">
+        <button class="btn secundario cheio" type="button" data-acao="ajuda">Abrir a ajuda</button>
+      </div>
+    </section>
+    <section class="card">
       <h2>Conta</h2>
-      <p class="mudo peq">Nome, e-mail e saída da conta.</p>
-      <div class="acoes-card ${'linha2'}">
-        <button class="btn secundario cheio" type="button" data-acao="perfil-nome">Mudar meu nome</button>
-        <button class="btn secundario cheio" type="button" data-acao="privacidade">Privacidade e termos</button>
+      <p class="mudo peq">Sair deste aparelho ou apagar tudo para sempre.</p>
+      <div class="acoes-card">
         <button class="btn perigo-claro cheio" type="button" data-acao="sair">Sair da conta</button>
         <button class="link perigo-txt" type="button" data-acao="conta-excluir">Excluir minha conta</button>
       </div>
-    </section>
-    </div>
+    </section>`)}
     <p class="aviso-rodape">Treino · versão 1</p>`;
   },
   mudancas: {
@@ -148,6 +177,8 @@ export const perfil = {
   },
   acoes: {
     privacidade: () => abrirPrivacidade(),
+    termos: () => abrirTermos(),
+    ajuda: () => abrirAjuda(),
     'conta-excluir': () => abrirExclusao(),
     'personal-ativar': async () => {
       if (!(await confirmar('Ativar a aba Alunos? Você poderá convidar alunos e montar treinos para eles. Seus próprios treinos continuam funcionando normalmente.', { ok: 'Ativar' }))) return;

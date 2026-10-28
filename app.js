@@ -11,6 +11,7 @@ import { perfil } from './perfil.js';
 import { personal, pararPersonal } from './personal.js';
 import { acoesRecados } from './recados.js';
 import { bloqueado } from './assinatura.js';
+import { abrirBoasVindas } from './ajuda.js';
 import { treinoAberto } from './treinar.js';
 import { aplicarTema } from './tema.js';
 
@@ -78,8 +79,16 @@ function montarPrincipal() {
     </div>`;
 }
 
+let boasVistas = false;
+function boasVindasSeNovo() {
+  if (boasVistas || !estado.perfil || estado.perfil.viuBoasVindas !== false) return;
+  boasVistas = true;
+  setTimeout(() => abrirBoasVindas(true), 400);
+}
+
 function renderizar() {
   if (telaAtual !== 'principal') return;
+  boasVindasSeNovo();
   const conteudo = document.getElementById('conteudo');
   if (!conteudo) return;
   // Se a lista de abas mudou (ex.: a pessoa virou personal), refaz o menu.
@@ -192,6 +201,7 @@ if (!configurado) {
     } else {
       pararPersonal();
       pararDados();
+      boasVistas = false;
     }
     escolherTela();
   });

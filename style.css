@@ -683,3 +683,35 @@ select.in { appearance: none; -webkit-appearance: none; background-image: linear
 .texto-legal h3, h3.sub { margin: 14px 0 4px; font-size: 1rem; }
 .perigo-txt { color: #d64545; }
 .acoes-card.linha2 { flex-wrap: wrap; }
+
+/* ---- Organização: seções do Perfil, ajuda, boas-vindas, dicas ---- */
+.secao { margin-top: 28px; }
+.secao-cab { margin: 0 4px 12px; }
+.secao-cab h2 { font-size: 13px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--mudo, #8b92a1); margin: 0 0 2px; font-weight: 700; }
+.secao-cab p { margin: 0; font-size: 14px; color: var(--mudo, #8b92a1); }
+.perfil-topo { position: relative; flex-wrap: wrap; }
+.perfil-editar { margin-left: auto; align-self: flex-start; }
+.lista-metas { display: grid; gap: 2px; margin: 8px 0 4px; }
+.lista-metas > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--borda); font-size: 15px; }
+.lista-metas > div:last-child { border-bottom: 0; }
+.lista-metas span { color: var(--mudo, #8b92a1); }
+.lista-metas strong { text-align: right; }
+.lista-simples { margin: 8px 0; padding-left: 20px; display: grid; gap: 4px; }
+.topico { border: 1px solid var(--borda); border-radius: 14px; margin: 8px 0; background: var(--card); }
+.topico summary { padding: 14px 16px; font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.topico summary::-webkit-details-marker { display: none; }
+.topico summary::after { content: '+'; font-size: 20px; color: var(--destaque); }
+.topico[open] summary::after { content: '–'; }
+.topico-corpo { padding: 0 16px 14px; font-size: 15px; line-height: 1.5; }
+.topico-corpo p { margin: 0 0 8px; }
+a.btn { display: block; text-align: center; text-decoration: none; margin: 10px 0 8px; }
+.boas { text-align: center; padding: 8px 4px 4px; }
+.boas-ico { font-size: 56px; line-height: 1; margin: 8px 0 14px; }
+.boas h2 { margin-bottom: 8px; }
+.boas p { color: var(--mudo, #8b92a1); line-height: 1.5; margin: 0 0 16px; }
+.boas-pontos { display: flex; gap: 6px; justify-content: center; margin-bottom: 18px; }
+.boas-pontos i { width: 8px; height: 8px; border-radius: 50%; background: var(--borda); }
+.boas-pontos i.on { background: var(--destaque); width: 22px; border-radius: 6px; }
+.icone-info { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--borda); background: transparent; color: var(--destaque); font-size: 14px; font-weight: 700; margin-left: 8px; vertical-align: middle; cursor: pointer; }
+
+.acoes-card.sem-auto { margin-top: 0; }

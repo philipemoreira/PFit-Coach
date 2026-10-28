@@ -193,7 +193,7 @@ function blocoGrupos() {
 
 function blocoFotos() {
   return `
-  <section class="card">
+  <section class="card larga">
     <div class="card-topo"><h2>Fotos do corpo</h2><button class="btn pequeno" type="button" data-acao="fotos-abrir">Abrir</button></div>
     <p class="mudo peq">Guarde fotos para comparar antes e depois. Só você vê, a não ser que escolha compartilhar com seu personal.</p>
   </section>`;
