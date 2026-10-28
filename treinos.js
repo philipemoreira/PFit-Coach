@@ -6,6 +6,7 @@ import { salvarDoc, removerDoc } from './dados.js';
 import { iniciarTreino } from './treinar.js';
 import { abrirAnilhas } from './anilhas.js';
 import { nav } from './nav.js';
+import { lerVideo } from './video.js';
 import { todosOsNomes } from './exercicios-base.js';
 
 function chipsDias(dias = []) {
@@ -41,11 +42,10 @@ function blocoExercicio(ex = {}) {
   return `
   <div class="ex-bloco ${ex.cardio ? 'cardio' : ''}" data-ex data-id="${escaparHtml(ex.id || novoId())}">
     <div class="ex-topo">
+      <button type="button" class="alca" data-drag aria-label="Segure e arraste para mudar a ordem" title="Segure e arraste para mudar a ordem"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></button>
       <input class="in" data-f="nome" placeholder="Nome do exercício" list="lista-exercicios" value="${v(ex.nome)}" maxlength="80">
       <div class="ex-mover">
-        <button type="button" data-mv="up" aria-label="Subir exercício">↑</button>
-        <button type="button" data-mv="down" aria-label="Descer exercício">↓</button>
-        <button type="button" data-mv="del" aria-label="Remover exercício">✕</button>
+        <button type="button" data-mv="del" aria-label="Remover exercício" title="Remover">✕</button>
       </div>
     </div>
     <label class="cardio-opcao"><input type="checkbox" data-f="cardio" ${ex.cardio ? 'checked' : ''}> Cardio (por tempo, sem séries)</label>
@@ -57,6 +57,7 @@ function blocoExercicio(ex = {}) {
       <label>Descanso (s)<input class="in" data-f="descanso" inputmode="numeric" value="${v(ex.descanso)}"></label>
     </div>
     <input class="in" data-f="obs" placeholder="Observação (opcional)" value="${v(ex.obs)}" maxlength="200">
+    <input class="in so-forca" data-f="video" type="url" inputmode="url" placeholder="Link do vídeo do exercício (opcional, começa com https://)" value="${v(ex.video)}" maxlength="300">
   </div>`;
 }
 
@@ -83,7 +84,8 @@ function coletar(el) {
       reps: ler(b, 'reps') || null,
       carga: numero(ler(b, 'carga')),
       descanso: parseInt(ler(b, 'descanso'), 10) || null,
-      obs: ler(b, 'obs') || null
+      obs: ler(b, 'obs') || null,
+      video: ler(b, 'video') || null
     };
   }).filter((e) => e.nome);
   return { nome, dias, exercicios };
@@ -108,6 +110,7 @@ export function abrirEditorTreino(treino, opcoes = {}) {
       <p class="mudo peq">Os treinos marcados para o dia aparecem na aba Hoje.</p>
     </div>
     <datalist id="lista-exercicios">${nomesJaUsados().map((n) => `<option value="${escaparHtml(n)}"></option>`).join('')}</datalist>
+    <p class="mudo peq">Para mudar a ordem, <b>segure o ⠿</b> de um exercício e arraste. O <b>✕</b> remove.</p>
     <div id="ex-lista">${exs.map(blocoExercicio).join('')}</div>
     <button class="btn secundario cheio" type="button" data-ed="add">+ Adicionar exercício</button>
     <p class="erro" data-erro role="alert"></p>
@@ -119,6 +122,41 @@ export function abrirEditorTreino(treino, opcoes = {}) {
   const el = folha.el;
   const erro = (t) => { const e = el.querySelector('[data-erro]'); e.textContent = t; if (t) e.scrollIntoView({ block: 'center' }); };
 
+  // Segurar a alça (⠿) e arrastar muda a ordem dos exercícios.
+  el.addEventListener('pointerdown', (e) => {
+    const alca = e.target.closest('[data-drag]');
+    if (!alca || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    e.preventDefault();
+    const bloco = alca.closest('[data-ex]');
+    const lista = bloco.parentNode;
+    const rolagem = el.closest('.folha') || el;
+    let y = e.clientY;
+    bloco.classList.add('arrastando');
+    lista.classList.add('ordenando'); // os blocos encolhem para caber vários na tela
+    const mover = (ev) => {
+      y = ev.clientY;
+      const outros = [...lista.querySelectorAll('[data-ex]')].filter((b) => b !== bloco);
+      const antes = outros.find((b) => { const r = b.getBoundingClientRect(); return y < r.top + r.height / 2; });
+      if (antes) { if (bloco.nextElementSibling !== antes) lista.insertBefore(bloco, antes); } else if (lista.lastElementChild !== bloco) lista.appendChild(bloco);
+    };
+    // Perto da borda de cima ou de baixo, a janela rola sozinha.
+    const rolar = setInterval(() => {
+      const r = rolagem.getBoundingClientRect();
+      if (y < r.top + 70) rolagem.scrollTop -= 12; else if (y > r.bottom - 70) rolagem.scrollTop += 12;
+    }, 16);
+    const soltar = () => {
+      clearInterval(rolar);
+      bloco.classList.remove('arrastando');
+      lista.classList.remove('ordenando');
+      document.removeEventListener('pointermove', mover);
+      document.removeEventListener('pointerup', soltar);
+      document.removeEventListener('pointercancel', soltar);
+    };
+    document.addEventListener('pointermove', mover);
+    document.addEventListener('pointerup', soltar);
+    document.addEventListener('pointercancel', soltar);
+  });
+
   el.addEventListener('click', async (e) => {
     const dia = e.target.closest('.dia-chip');
     if (dia) { dia.setAttribute('aria-pressed', dia.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); return; }
@@ -127,9 +165,7 @@ export function abrirEditorTreino(treino, opcoes = {}) {
     const mv = e.target.closest('[data-mv]');
     if (mv) {
       const bloco = mv.closest('[data-ex]');
-      if (mv.dataset.mv === 'up' && bloco.previousElementSibling) bloco.parentNode.insertBefore(bloco, bloco.previousElementSibling);
-      else if (mv.dataset.mv === 'down' && bloco.nextElementSibling) bloco.parentNode.insertBefore(bloco.nextElementSibling, bloco);
-      else if (mv.dataset.mv === 'del') bloco.remove();
+      if (mv.dataset.mv === 'del') bloco.remove();
       return;
     }
 
@@ -145,6 +181,8 @@ export function abrirEditorTreino(treino, opcoes = {}) {
       if (!d.exercicios.length) return erro('Adicione pelo menos um exercício.');
       const semMin = d.exercicios.find((x) => x.cardio && !(x.minutos >= 1));
       if (semMin) return erro(`Informe os minutos do cardio "${semMin.nome}".`);
+      const videoRuim = d.exercicios.find((x) => x.video && !lerVideo(x.video));
+      if (videoRuim) return erro(`O link do vídeo de "${videoRuim.nome}" precisa começar com https://`);
       const semSeries = d.exercicios.find((x) => !x.cardio && !(x.series >= 1));
       if (semSeries) return erro(`Informe quantas séries tem em "${semSeries.nome}".`);
       salvarDoc(uidAlvo, colecao, treino ? treino.id : novoId(), {

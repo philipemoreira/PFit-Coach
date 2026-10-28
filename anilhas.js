@@ -18,23 +18,41 @@ export function calcularAnilhas(total) {
 
 export function abrirAnilhas(cargaInicial) {
   const f = abrirFolha(`
-    <h2>Calculadora de anilhas</h2>
-    <p class="mudo peq">Digite a carga em anilhas (a mesma que você anota no treino). Mostro quanto colocar em cada lado.</p>
-    <label class="campo">Carga (kg)<input class="in" inputmode="decimal" data-f="total" value="${cargaInicial != null ? escaparHtml(String(cargaInicial).replace('.', ',')) : ''}" placeholder="Ex.: 60"></label>
+    <h2>Quais anilhas colocar?</h2>
+    <p class="mudo">Digite o peso <b>só das anilhas</b> (o peso da barra não entra na conta). Eu divido entre os dois lados.</p>
+    <div class="seg" role="group" aria-label="O número que você digita é">
+      <button type="button" aria-pressed="true" data-modo="total">Total dos 2 lados</button>
+      <button type="button" aria-pressed="false" data-modo="lado">Cada lado</button>
+    </div>
+    <label class="campo"><span id="anilhas-rotulo">Peso total das anilhas (kg)</span><input class="in" inputmode="decimal" data-f="total" value="${cargaInicial != null ? escaparHtml(String(cargaInicial).replace('.', ',')) : ''}" placeholder="Ex.: 60"></label>
+    <p class="mudo peq" id="anilhas-exemplo">Exemplo: 60 kg no total = 30 kg em cada lado = 1× 25 kg + 1× 5 kg de cada lado.</p>
     <div id="anilhas-res" class="anilhas-res" aria-live="polite"></div>
-    <p class="mudo peq">Anilhas usadas: ${ANILHAS.map((a) => formatarNumero(a)).join(', ')} kg.</p>
+    <p class="mudo peq">Anilhas consideradas: ${ANILHAS.map((a) => formatarNumero(a)).join(', ')} kg.</p>
     <button class="btn cheio" type="button" data-fechar>Fechar</button>`);
-  const total = f.el.querySelector('[data-f="total"]');
+  const campo = f.el.querySelector('[data-f="total"]');
   const res = f.el.querySelector('#anilhas-res');
+  let modo = 'total';
   const pintar = () => {
-    const t = numero(total.value);
-    if (t === null) { res.innerHTML = '<p class="mudo">Digite a carga total.</p>'; return; }
-    const r = calcularAnilhas(t);
-    if (!r) { res.innerHTML = '<p class="mudo">Digite uma carga maior que zero.</p>'; return; }
-    res.innerHTML = `<p class="mudo peq">Em cada lado:</p>
+    const t = numero(campo.value);
+    if (t === null) { res.innerHTML = '<p class="mudo">Digite o peso das anilhas.</p>'; return; }
+    const total = modo === 'lado' ? t * 2 : t;
+    const r = calcularAnilhas(total);
+    if (!r) { res.innerHTML = '<p class="mudo">Digite um peso maior que zero.</p>'; return; }
+    const lado = total / 2;
+    res.innerHTML = `<p class="anilhas-conta">${formatarNumero(total)} kg no total = <b>${formatarNumero(lado)} kg em cada lado</b></p>
+      <p class="mudo peq">Coloque em <b>cada lado</b> da barra:</p>
       <div class="anilhas-lista">${r.usadas.map((u) => `<span class="anilha"><b>${u.n}×</b> ${formatarNumero(u.kg)} kg</span>`).join('')}</div>
-      ${r.sobra > 0 ? `<p class="erro">Faltam ${formatarNumero(r.sobra * 2)} kg para fechar a carga com essas anilhas.</p>` : ''}`;
+      ${r.sobra > 0 ? `<p class="erro">Com essas anilhas faltam ${formatarNumero(r.sobra * 2)} kg para fechar o peso (${formatarNumero(r.sobra)} kg em cada lado).</p>` : ''}`;
   };
+  f.el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-modo]');
+    if (!b) return;
+    modo = b.dataset.modo;
+    f.el.querySelectorAll('[data-modo]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    f.el.querySelector('#anilhas-rotulo').textContent = modo === 'lado' ? 'Peso das anilhas em cada lado (kg)' : 'Peso total das anilhas (kg)';
+    f.el.querySelector('#anilhas-exemplo').textContent = modo === 'lado' ? 'Exemplo: 30 kg em cada lado = 1× 25 kg + 1× 5 kg de cada lado.' : 'Exemplo: 60 kg no total = 30 kg em cada lado = 1× 25 kg + 1× 5 kg de cada lado.';
+    pintar();
+  });
   f.el.addEventListener('input', pintar);
   pintar();
 }

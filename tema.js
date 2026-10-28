@@ -1,6 +1,6 @@
 // Tema do app: Automático (segue o celular), Claro ou Escuro. A escolha fica guardada no aparelho.
 const CHAVE = 'treino-tema';
-const COR_BARRA = { claro: '#f2f4f7', escuro: '#0b0d10' };
+const COR_BARRA = { claro: '#f3f4f6', escuro: '#0f1114' };
 
 export function temaSalvo() {
   try {

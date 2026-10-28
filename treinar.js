@@ -8,6 +8,7 @@ import { volumeDasSeries, maiorCargaAntes, formatarVolume } from './metricas.js'
 import { abrirAnilhas } from './anilhas.js';
 import { nav } from './nav.js';
 import { dicaDoExercicio } from './dicas.js';
+import { lerVideo, linkBusca, urlEmbed, urlMiniatura } from './video.js';
 
 let S = null; // treino em andamento
 let raiz = null;
@@ -58,11 +59,12 @@ export function iniciarTreino(treino) {
     treinoId: treino.id,
     treinoNome: treino.nome,
     inicio: Date.now(),
+    atual: 0,
     nota: '',
     exercicios: (treino.exercicios || []).map((ex) => {
       if (ex.cardio) {
         const uc = ultimoCardio(ex.nome);
-        return { nome: ex.nome, cardio: true, obs: ex.obs || '', descanso: 0, planoMin: ex.minutos || null, ultimaMin: uc, minutos: String(ex.minutos || (uc ? uc.minutos : '') || ''), feito: false, series: [] };
+        return { nome: ex.nome, cardio: true, video: '', obs: ex.obs || '', descanso: 0, planoMin: ex.minutos || null, ultimaMin: uc, minutos: String(ex.minutos || (uc ? uc.minutos : '') || ''), feito: false, series: [] };
       }
       const ult = ultimaVez(ex.nome);
       const n = Math.max(1, ex.series || 1);
@@ -76,7 +78,7 @@ export function iniciarTreino(treino) {
           feito: false
         });
       }
-      return { nome: ex.nome, maxAnt: maiorCargaAntes(ex.nome), obs: ex.obs || '', descanso: ex.descanso || 0, planoSeries: n, planoReps: ex.reps || '', planoCarga: ex.carga ?? null, ultima: ult, series };
+      return { nome: ex.nome, maxAnt: maiorCargaAntes(ex.nome), video: ex.video || '', obs: ex.obs || '', descanso: ex.descanso || 0, planoSeries: n, planoReps: ex.reps || '', planoCarga: ex.carga ?? null, ultima: ult, series };
     })
   };
   guardar();
@@ -87,6 +89,7 @@ export function retomarTreino() {
   const r = rascunhoSalvo();
   if (!r || S) return;
   S = r;
+  if (!Number.isInteger(S.atual) || S.atual < 0 || S.atual > S.exercicios.length) S.atual = 0;
   abrir();
 }
 
@@ -99,6 +102,23 @@ function abrir() {
   desenhar();
   raiz.addEventListener('click', aoClicar);
   raiz.addEventListener('input', aoDigitar);
+  // Deslizar para o lado troca de exercício (fora dos campos de número).
+  let x0 = null; let y0 = null;
+  raiz.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    x0 = e.target.closest('input, textarea, iframe, .pontos') ? null : t.clientX; y0 = t.clientY;
+  }, { passive: true });
+  raiz.addEventListener('touchend', (e) => {
+    if (x0 === null || !S) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - x0; const dy = t.clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) > 90 && Math.abs(dx) > Math.abs(dy) * 2) irPara(S.atual + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+  raiz.addEventListener('keydown', (e) => {
+    if (!S || e.target.closest('input, textarea')) return;
+    if (e.key === 'ArrowRight') irPara(S.atual + 1); else if (e.key === 'ArrowLeft') irPara(S.atual - 1);
+  });
   timerRelogio = setInterval(atualizarRelogio, 1000);
   pedirTelaLigada();
 }
@@ -128,10 +148,8 @@ const exercicioCompleto = (ex) => seriesFeitas(ex) === seriesTotal(ex);
 function cartaoCardio(ex, i) {
   return `
   <section class="ex-card ${ex.feito ? 'completo' : ''}" data-card="${i}">
-    <div class="ex-topo"><h3>${escaparHtml(ex.nome)} <span class="selo">cardio</span></h3>${ex.feito ? '<span class="selo ok">concluído</span>' : ''}</div>
     <p class="mudo peq">${ex.planoMin ? `Meta: ${ex.planoMin} min` : 'Por tempo'}</p>
     ${ex.ultimaMin ? `<p class="ultima">Última vez (${formatarDataCurta(ex.ultimaMin.data)}): ${ex.ultimaMin.minutos} min</p>` : ''}
-    ${ex.obs ? `<p class="obs">${escaparHtml(ex.obs)}</p>` : ''}
     <div class="serie cardio-linha ${ex.feito ? 'feita' : ''}">
       <input class="in-num" inputmode="numeric" data-t="minutos" data-e="${i}" value="${escaparHtml(ex.minutos)}" placeholder="min" aria-label="Minutos de ${escaparHtml(ex.nome)}">
       <span class="mudo">minutos</span>
@@ -141,45 +159,59 @@ function cartaoCardio(ex, i) {
 }
 
 const anteriorDe = (ex, j) => (ex.ultima && ex.ultima.series[j]) || null;
-const textoAnterior = (a) => (a ? `${a.carga != null ? formatarNumero(a.carga) : '—'}×${a.reps != null ? formatarNumero(a.reps) : '—'}` : '—');
+const textoAnterior = (a) => (a ? `${a.carga != null ? formatarNumero(a.carga) : '—'} kg × ${a.reps != null ? formatarNumero(a.reps) : '—'}` : '');
 
-function cartaoExercicio(ex, i) {
+// Séries do exercício atual: uma linha por série (número, kg, reps, concluir).
+function htmlSeries(ex, i) {
   if (ex.cardio) return cartaoCardio(ex, i);
-  const linhas = ex.series.map((s, j) => {
-    const ant = anteriorDe(ex, j);
-    return `
-    <div class="serie ${s.feito ? 'feita' : ''}">
+  const linhas = ex.series.map((s, j) => `
+    <div class="serie2 ${s.feito ? 'feita' : ''}">
       <button type="button" class="num tipo-${s.tipo || 'n'}" data-t="tipo" data-e="${i}" data-s="${j}" aria-label="Série ${j + 1}${s.tipo ? ', ' + NOME_TIPO[s.tipo] : ''}. Toque para mudar o tipo">${s.tipo ? LETRA_TIPO[s.tipo] : j + 1}</button>
-      ${ant ? `<button type="button" class="anterior" data-t="copiar" data-e="${i}" data-s="${j}" aria-label="Usar o valor da última vez: ${textoAnterior(ant)}">${textoAnterior(ant)}</button>` : '<span class="anterior vazio">—</span>'}
-      <input class="in-num" inputmode="decimal" data-t="carga" data-e="${i}" data-s="${j}" value="${escaparHtml(s.carga)}" placeholder="kg" aria-label="Carga da série ${j + 1} em quilos">
-      <input class="in-num" inputmode="numeric" data-t="reps" data-e="${i}" data-s="${j}" value="${escaparHtml(s.reps)}" placeholder="reps" aria-label="Repetições da série ${j + 1}">
+      <input class="in-num grande" inputmode="decimal" data-t="carga" data-e="${i}" data-s="${j}" value="${escaparHtml(s.carga)}" placeholder="0" aria-label="Carga da série ${j + 1} em quilos">
+      <input class="in-num grande" inputmode="numeric" data-t="reps" data-e="${i}" data-s="${j}" value="${escaparHtml(s.reps)}" placeholder="0" aria-label="Repetições da série ${j + 1}">
       <button type="button" class="check ${s.feito ? 'on' : ''}" data-t="check" data-e="${i}" data-s="${j}" aria-pressed="${s.feito}" aria-label="${s.feito ? 'Desmarcar' : 'Concluir'} série ${j + 1}">${CHECK}</button>
-    </div>`;
-  }).join('');
-  const completo = exercicioCompleto(ex);
+    </div>`).join('');
   return `
-  <section class="ex-card ${completo ? 'completo' : ''}" data-card="${i}">
-    <div class="ex-topo">
-      <h3>${escaparHtml(ex.nome)}${dicaDoExercicio(ex.nome) ? ` <button type="button" class="icone-info" data-t="dica" data-e="${i}" aria-label="Como fazer ${escaparHtml(ex.nome)}">?</button>` : ''}</h3>
-      <span class="selo ${completo ? 'ok' : ''}">${seriesFeitas(ex)}/${seriesTotal(ex)}</span>
-    </div>
-    <p class="mudo peq">${escaparHtml(textoPlano(ex))}</p>
-    ${ex.obs ? `<p class="obs">${escaparHtml(ex.obs)}</p>` : ''}
     <div class="series">
-      <div class="serie cab"><span>Série</span><span>Anterior</span><span>kg</span><span>Reps</span><span>Feito</span></div>
+      <div class="serie2 cab2"><span></span><span>KG</span><span>REPS</span><span></span></div>
       ${linhas}
     </div>
     <div class="ex-rodape">
       <button type="button" class="btn-ex" data-t="mais" data-e="${i}">+ Série</button>
-      <button type="button" class="btn-ex" data-t="anilhas" data-e="${i}">Anilhas</button>
+      <button type="button" class="btn-ex" data-t="anilhas" data-e="${i}">Calcular anilhas</button>
       ${ex.series.length > 1 ? `<button type="button" class="btn-ex" data-t="menos" data-e="${i}">− Série</button>` : ''}
-    </div>
-  </section>`;
+    </div>`;
+}
+
+const videoOculto = () => { try { return localStorage.getItem('treino-video-oculto') === '1'; } catch { return false; } };
+
+// Vídeo e dica de como fazer. Esta parte não é redesenhada a cada série marcada (para o vídeo não reiniciar).
+function htmlMidia(ex) {
+  if (ex.cardio) return '';
+  const v = lerVideo(ex.video);
+  const dica = dicaDoExercicio(ex.nome);
+  const oculto = videoOculto();
+  let corpo;
+  if (v && v.tipo === 'youtube') {
+    corpo = `<button type="button" class="video-box" data-t="video-play" data-id="${escaparHtml(v.id)}" aria-label="Assistir ao vídeo de ${escaparHtml(ex.nome)}"><img src="${urlMiniatura(v.id)}" alt="" loading="lazy"><span class="video-play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></button>
+      <a class="video-link peq" href="${escaparHtml(v.url)}" target="_blank" rel="noopener noreferrer">Abrir no YouTube</a>`;
+  } else if (v) {
+    corpo = `<a class="video-link" href="${escaparHtml(v.url)}" target="_blank" rel="noopener noreferrer">▶ Abrir o vídeo do exercício</a>`;
+  } else {
+    corpo = `<a class="video-link" href="${escaparHtml(linkBusca(ex.nome))}" target="_blank" rel="noopener noreferrer">▶ Ver como fazer no YouTube</a>`;
+  }
+  return `
+    <div class="midia">
+      <div class="midia-cab"><b>Vídeo do exercício</b><button type="button" class="link" data-t="video-toggle">${oculto ? 'Mostrar' : 'Recolher'}</button></div>
+      <div class="midia-corpo" ${oculto ? 'hidden' : ''}>${corpo}</div>
+      ${dica ? `<details class="como-fazer"><summary>Como fazer</summary><p>${escaparHtml(dica.texto)}</p><p class="mudo peq">Dica geral. Se sentir dor (não é o cansaço normal do músculo), pare e procure um profissional.</p></details>` : ''}
+    </div>`;
 }
 
 const totalFeitas = () => S.exercicios.reduce((n, e) => n + seriesFeitas(e), 0);
 const totalSeries = () => S.exercicios.reduce((n, e) => n + seriesTotal(e), 0);
 const progressoPct = () => (totalSeries() ? Math.round((totalFeitas() / totalSeries()) * 100) : 0);
+const noResumo = () => S.atual >= S.exercicios.length;
 
 function abrirTipo(i, j) {
   const sr = S.exercicios[i].series[j];
@@ -191,24 +223,104 @@ function abrirTipo(i, j) {
     const b = e.target.closest('[data-tipo]');
     if (!b) return;
     if (b.dataset.tipo === 'n') delete sr.tipo; else sr.tipo = b.dataset.tipo;
-    guardar(); f.fechar(); desenhar();
+    guardar(); f.fechar(); atualizar();
   });
 }
 
+function htmlPontos() {
+  const pontos = S.exercicios.map((ex, i) => {
+    const cls = i === S.atual ? 'atual' : exercicioCompleto(ex) ? 'ok' : seriesFeitas(ex) > 0 ? 'parcial' : '';
+    return `<button type="button" class="ponto ${cls}" data-t="ir" data-e="${i}" aria-label="Exercício ${i + 1}: ${escaparHtml(ex.nome)}" ${i === S.atual ? 'aria-current="step"' : ''}>${i + 1}</button>`;
+  }).join('');
+  return `${pontos}<button type="button" class="ponto fim ${noResumo() ? 'atual' : ''}" data-t="ir" data-e="${S.exercicios.length}" aria-label="Resumo e finalizar">✓</button>`;
+}
+
+function htmlNavegacao() {
+  const n = S.exercicios.length;
+  const ant = `<button type="button" class="btn secundario t-ant" data-t="ant" ${S.atual === 0 ? 'disabled' : ''} aria-label="Exercício anterior">‹ Anterior</button>`;
+  if (noResumo()) return `${ant}<button type="button" class="btn t-prox" data-t="finalizar">Finalizar treino ✓</button>`;
+  const ex = S.exercicios[S.atual];
+  const ultimo = S.atual === n - 1;
+  const rotulo = seriesFeitas(ex) === 0 ? (ultimo ? 'Pular e ver resumo ›' : 'Pular exercício ›') : (ultimo ? 'Ver resumo ›' : 'Próximo ›');
+  return `${ant}<button type="button" class="btn t-prox ${exercicioCompleto(ex) ? 'sugerido' : seriesFeitas(ex) === 0 ? 'secundario' : ''}" data-t="prox">${rotulo}</button>`;
+}
+
+function htmlResumo() {
+  const linhas = S.exercicios.map((ex, i) => {
+    const f = seriesFeitas(ex); const t = seriesTotal(ex);
+    const estadoTxt = f === t ? 'completo' : f > 0 ? `${f} de ${t} séries` : 'pulado';
+    return `<button type="button" class="resumo-linha ${f === t ? 'ok' : f === 0 ? 'pulado' : ''}" data-t="ir" data-e="${i}"><span class="r-nome">${i + 1}. ${escaparHtml(ex.nome)}</span><span class="r-estado">${estadoTxt}</span></button>`;
+  }).join('');
+  return `
+    <section class="ex-solo">
+      <p class="ex-pos">Fim do treino</p>
+      <h2 class="ex-nome">Tudo certo por aqui?</h2>
+      <p class="ex-plano">${totalFeitas()} de ${totalSeries()} séries feitas · toque num exercício para voltar a ele.</p>
+      <div class="resumo-lista">${linhas}</div>
+      <section class="ex-card"><h3>Anotação do treino</h3><textarea class="in" data-t="nota" rows="3" maxlength="500" placeholder="Como foi? Dor, energia, o que ajustar…">${escaparHtml(S.nota || '')}</textarea></section>
+    </section>`;
+}
+
+function htmlExercicio(ex, i) {
+  const completo = exercicioCompleto(ex);
+  return `
+    <section class="ex-solo">
+      <p class="ex-pos">Exercício ${i + 1} de ${S.exercicios.length}</p>
+      <div class="ex-linha-nome"><h2 class="ex-nome">${escaparHtml(ex.nome)}${ex.cardio ? ' <span class="selo">cardio</span>' : ''}</h2><span class="selo ${completo ? 'ok' : ''}" id="selo-ex">${seriesFeitas(ex)}/${seriesTotal(ex)}</span></div>
+      ${ex.cardio ? '' : `<p class="ex-plano">${escaparHtml(textoPlano(ex))}</p>`}
+      ${ex.obs ? `<p class="obs">${escaparHtml(ex.obs)}</p>` : ''}
+      ${ex.ultima ? `<p class="ex-ultima">Última vez: ${escaparHtml(ex.ultima.series.map((x) => `${x.carga != null ? formatarNumero(x.carga) : '—'}×${x.reps != null ? formatarNumero(x.reps) : '—'}`).join(' · '))}</p>` : ''}
+      <div id="zona-series" data-card="${i}">${htmlSeries(ex, i)}</div>
+      ${htmlMidia(ex)}
+    </section>`;
+}
+
+// Desenha a tela inteira (ao trocar de exercício).
 function desenhar() {
   const cont = raiz.querySelector('#treinar-conteudo');
-  const rolagem = cont.querySelector('.treinar-corpo');
-  const y = rolagem ? rolagem.scrollTop : 0;
   cont.innerHTML = `
     <div class="treinar-topo">
       <button class="icone-btn" type="button" data-t="cancelar" aria-label="Sair do treino sem salvar">✕</button>
       <div class="treinar-titulo"><strong>${escaparHtml(S.treinoNome)}</strong><span id="t-relogio">${formatarDuracao((Date.now() - S.inicio) / 1000)}</span><small id="t-volume" class="t-volume">${formatarVolume(volumeAtual())}</small></div>
-      <button class="btn pequeno" type="button" data-t="finalizar">Finalizar</button>
+      ${noResumo() ? '<span class="topo-vazio"></span>' : '<button class="btn pequeno" type="button" data-t="finalizar">Finalizar</button>'}
     </div>
-    <div class="t-progresso" aria-label="Progresso do treino"><div class="t-prog-barra"><i style="width:${progressoPct()}%"></i></div><small>${totalFeitas()} de ${totalSeries()} séries concluídas</small></div>
-    <div class="treinar-corpo">${S.exercicios.map(cartaoExercicio).join('')}<section class="ex-card"><h3>Anotação do treino</h3><textarea class="in" data-t="nota" rows="3" maxlength="500" placeholder="Como foi? Dor, energia, o que ajustar…">${escaparHtml(S.nota || '')}</textarea></section><div class="espaco-descanso"></div></div>`;
-  const novo = cont.querySelector('.treinar-corpo');
-  if (novo) novo.scrollTop = y;
+    <div class="t-progresso" aria-label="Progresso do treino"><div class="t-prog-barra"><i style="width:${progressoPct()}%"></i></div><small id="t-prog-txt">${totalFeitas()} de ${totalSeries()} séries concluídas</small></div>
+    <div class="pontos" id="pontos" role="group" aria-label="Exercícios">${htmlPontos()}</div>
+    <div class="treinar-corpo" id="treinar-corpo">${noResumo() ? htmlResumo() : htmlExercicio(S.exercicios[S.atual], S.atual)}<div class="espaco-descanso"></div></div>
+    <div class="t-nav" id="t-nav">${htmlNavegacao()}</div>`;
+  const at = cont.querySelector('.ponto.atual');
+  if (at && at.scrollIntoView) at.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+
+// Atualiza só o que muda ao marcar série (não mexe no vídeo nem tira o teclado do campo).
+function atualizar() {
+  if (!raiz || noResumo()) { if (raiz) desenhar(); return; }
+  const ex = S.exercicios[S.atual];
+  const zona = raiz.querySelector('#zona-series');
+  if (zona) zona.innerHTML = htmlSeries(ex, S.atual);
+  const selo = raiz.querySelector('#selo-ex');
+  if (selo) { selo.textContent = `${seriesFeitas(ex)}/${seriesTotal(ex)}`; selo.classList.toggle('ok', exercicioCompleto(ex)); }
+  const barra = raiz.querySelector('.t-prog-barra i');
+  if (barra) barra.style.width = `${progressoPct()}%`;
+  const txt = raiz.querySelector('#t-prog-txt');
+  if (txt) txt.textContent = `${totalFeitas()} de ${totalSeries()} séries concluídas`;
+  const pontos = raiz.querySelector('#pontos');
+  if (pontos) pontos.innerHTML = htmlPontos();
+  const nv = raiz.querySelector('#t-nav');
+  if (nv) nv.innerHTML = htmlNavegacao();
+  const v = raiz.querySelector('#t-volume');
+  if (v) v.textContent = formatarVolume(volumeAtual());
+}
+
+function irPara(n) {
+  const max = S.exercicios.length; // o último passo é o resumo
+  const novo = Math.max(0, Math.min(max, n));
+  if (novo === S.atual) return;
+  S.atual = novo;
+  guardar();
+  desenhar();
+  const corpo = raiz.querySelector('#treinar-corpo');
+  if (corpo) corpo.scrollTop = 0;
 }
 
 const volumeAtual = () => volumeDasSeries(S.exercicios.map((e) => ({ series: e.series.map((x) => ({ carga: numero(x.carga), reps: numero(x.reps), feito: x.feito, tipo: x.tipo })) })));
@@ -244,14 +356,26 @@ function aoClicar(e) {
       const sr = S.exercicios[i].series[j];
       if (ant.carga != null) sr.carga = String(ant.carga).replace('.', ',');
       if (ant.reps != null) sr.reps = String(ant.reps);
-      guardar(); desenhar();
+      guardar(); atualizar();
     }
   } else if (acao === 'cardio-check') {
     S.exercicios[i].feito = !S.exercicios[i].feito;
-    guardar(); desenhar();
-  } else if (acao === 'dica') {
-    const d = dicaDoExercicio(S.exercicios[i].nome);
-    if (d) abrirFolha(`<h2>${escaparHtml(d.nome)}</h2><span class="selo">${escaparHtml(d.grupo)}</span><h3 class="sub">Como fazer</h3><p>${escaparHtml(d.texto)}</p><p class="mudo peq">Dica geral. Se sentir dor (não é o cansaço normal do músculo), pare e procure um profissional. Seu personal pode ajustar a execução para você.</p><button class="btn cheio" type="button" data-fechar>Fechar</button>`);
+    guardar(); atualizar();
+  } else if (acao === 'prox') {
+    irPara(S.atual + 1);
+  } else if (acao === 'ant') {
+    irPara(S.atual - 1);
+  } else if (acao === 'ir') {
+    irPara(i);
+  } else if (acao === 'video-play') {
+    const id = b.dataset.id;
+    b.outerHTML = `<div class="video-box tocando"><iframe src="${urlEmbed(id)}" title="Vídeo do exercício" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`;
+  } else if (acao === 'video-toggle') {
+    const corpo = raiz.querySelector('.midia-corpo');
+    const esconder = !corpo.hidden;
+    corpo.hidden = esconder;
+    b.textContent = esconder ? 'Mostrar' : 'Recolher';
+    try { localStorage.setItem('treino-video-oculto', esconder ? '1' : '0'); } catch { /* ok */ }
   } else if (acao === 'anilhas') {
     const ex = S.exercicios[i];
     const ref = ex.series.map((x) => numero(x.carga)).find((c) => c != null);
@@ -268,11 +392,7 @@ function aoClicar(e) {
       if (!String(s.reps || '').trim()) s.reps = ant && ant.reps != null ? String(ant.reps) : (cima ? cima.reps : s.reps);
     }
     guardar();
-    desenhar();
-    if (s.feito && exercicioCompleto(S.exercicios[i])) {
-      const prox = S.exercicios.findIndex((e, k) => k > i && !exercicioCompleto(e));
-      if (prox >= 0) setTimeout(() => { const c = raiz && raiz.querySelector(`[data-card="${prox}"]`); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 350);
-    }
+    atualizar();
     if (s.feito) {
       const ex0 = S.exercicios[i];
       const c = numero(s.carga);
@@ -286,10 +406,10 @@ function aoClicar(e) {
     const ex = S.exercicios[i];
     const ult = ex.series[ex.series.length - 1];
     ex.series.push({ carga: ult.carga, reps: ult.reps, feito: false });
-    guardar(); desenhar();
+    guardar(); atualizar();
   } else if (acao === 'menos') {
     const ex = S.exercicios[i];
-    if (ex.series.length > 1) { ex.series.pop(); guardar(); desenhar(); }
+    if (ex.series.length > 1) { ex.series.pop(); guardar(); atualizar(); }
   } else if (acao === 'cancelar') {
     cancelar();
   } else if (acao === 'finalizar') {
