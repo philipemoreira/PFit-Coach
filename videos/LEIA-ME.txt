@@ -1,0 +1,8 @@
+PASTA DOS VIDEOS DOS EXERCICIOS
+
+1. Coloque aqui os seus videos curtos (.mp4), por exemplo: supino-reto.mp4
+2. Mantenha cada video pequeno (de preferencia abaixo de 20 MB; o limite do GitHub e 100 MB por arquivo).
+3. No app, ao editar o treino, no campo "Video" do exercicio escreva: videos/supino-reto.mp4
+4. O video toca dentro do app.
+
+Tambem funciona colar um link do YouTube ou do Vimeo no mesmo campo.

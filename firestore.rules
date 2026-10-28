@@ -67,6 +67,11 @@ service cloud.firestore {
         allow create, update: if (ehDono(userId) && !temPersonal(userId) && temAcesso(userId)) || (ehPersonalDe(userId) && personalEmDia());
         allow delete: if (ehDono(userId) && !temPersonal(userId)) || ehPersonalDe(userId);
       }
+      match /dietaItens/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow create, update: if (ehDono(userId) && !temPersonal(userId) && temAcesso(userId)) || (ehPersonalDe(userId) && personalEmDia());
+        allow delete: if (ehDono(userId) && !temPersonal(userId)) || ehPersonalDe(userId);
+      }
 
       // Metas definidas pelo personal para o aluno.
       match /config/{id} {

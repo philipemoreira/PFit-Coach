@@ -57,7 +57,7 @@ function blocoExercicio(ex = {}) {
       <label>Descanso (s)<input class="in" data-f="descanso" inputmode="numeric" value="${v(ex.descanso)}"></label>
     </div>
     <input class="in" data-f="obs" placeholder="Observação (opcional)" value="${v(ex.obs)}" maxlength="200">
-    <input class="in so-forca" data-f="video" type="url" inputmode="url" placeholder="Link do vídeo do exercício (opcional, começa com https://)" value="${v(ex.video)}" maxlength="300">
+    <input class="in so-forca" data-f="video" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Vídeo (opcional): link do YouTube ou videos/nome.mp4" value="${v(ex.video)}" maxlength="300">
   </div>`;
 }
 
@@ -182,7 +182,7 @@ export function abrirEditorTreino(treino, opcoes = {}) {
       const semMin = d.exercicios.find((x) => x.cardio && !(x.minutos >= 1));
       if (semMin) return erro(`Informe os minutos do cardio "${semMin.nome}".`);
       const videoRuim = d.exercicios.find((x) => x.video && !lerVideo(x.video));
-      if (videoRuim) return erro(`O link do vídeo de "${videoRuim.nome}" precisa começar com https://`);
+      if (videoRuim) return erro(`Não reconheci o vídeo de "${videoRuim.nome}". Use um link https:// do YouTube ou de um arquivo .mp4, ou o caminho videos/nome.mp4.`);
       const semSeries = d.exercicios.find((x) => !x.cardio && !(x.series >= 1));
       if (semSeries) return erro(`Informe quantas séries tem em "${semSeries.nome}".`);
       salvarDoc(uidAlvo, colecao, treino ? treino.id : novoId(), {

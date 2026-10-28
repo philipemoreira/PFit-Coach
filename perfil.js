@@ -12,7 +12,7 @@ import { abrirAjuda } from './ajuda.js';
 import { abrirOnboarding, resumoAnamnese } from './onboarding.js';
 import { blocoAssinatura, bloqueado } from './assinatura.js';
 
-const COLECOES = ['treinos', 'regras', 'sessoes', 'peso', 'checks', 'agua', 'medidas', 'alimentos', 'refeicoes'];
+const COLECOES = ['treinos', 'regras', 'dietaItens', 'sessoes', 'peso', 'checks', 'agua', 'medidas', 'alimentos', 'refeicoes'];
 
 async function baixarBackup() {
   try {
@@ -47,7 +47,7 @@ async function restaurarBackup(arquivo) {
   if (!dados || dados.app !== 'treino') return toast('Esse arquivo não é um backup do Treino.');
   const listas = {};
   // Quem tem personal não pode mexer no treino e na dieta (o personal é quem monta).
-  const COLS = estado.vinculo ? COLECOES.filter((c) => c !== 'treinos' && c !== 'regras') : COLECOES;
+  const COLS = estado.vinculo ? COLECOES.filter((c) => c !== 'treinos' && c !== 'regras' && c !== 'dietaItens') : COLECOES;
   COLS.forEach((c) => { listas[c] = Array.isArray(dados[c]) ? dados[c].filter((x) => x && typeof x.id === 'string' && x.id) : []; });
   const resumo = COLS.map((c) => `${listas[c].length} ${c}`).join(', ');
   const ok = await confirmar(`Restaurar o backup (${resumo})? O que já existe com o mesmo código é substituído; o resto fica como está.`, { ok: 'Restaurar' });

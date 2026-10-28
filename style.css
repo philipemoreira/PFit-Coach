@@ -1025,3 +1025,31 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 .t-nav .btn { height: 50px; font-size: 16px; }
 .treinar .descanso { bottom: calc(env(safe-area-inset-bottom) + 72px); }
 .midia { margin: 12px 0 4px; }
+
+/* Dieta trancada (quem não tem personal) */
+.nav-btn { position: relative; }
+.nav-btn.trancado { opacity: .5; cursor: not-allowed; }
+.nav-btn .cadeado { position: absolute; top: 9px; left: calc(50% + 2px); width: 13px; height: 13px; fill: var(--bg); stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+@media (min-width: 900px) { .nav-btn .cadeado { position: static; margin-left: auto; width: 16px; height: 16px; } }
+.tile-trancado { color: var(--mudo); }
+.tile-trancado .cadeado-grande { width: 38px; height: 38px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+.video-box video { position: absolute; inset: 0; width: 100%; height: 100%; background: #000; object-fit: contain; }
+
+/* ---------- Dieta: lista fixa por refeição ---------- */
+.dieta-refeicao{margin-top:14px}
+.dieta-refeicao h3{font-size:.95rem;margin:0}
+.dieta-item{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--linha,rgba(128,128,128,.18))}
+.dieta-item:last-child{border-bottom:0}
+.dieta-check{flex:none;width:44px;height:44px;display:grid;place-items:center;background:none;border:0;padding:0;cursor:pointer}
+.dieta-check .caixa{width:28px;height:28px;border-radius:8px;border:2px solid var(--mudo,#8a8f98);display:grid;place-items:center;font-weight:800;color:#0f1114}
+.dieta-item.feito .dieta-check .caixa{background:var(--lima,#c6f432);border-color:var(--lima,#c6f432)}
+.dieta-item.passou .dieta-check .caixa{background:#f5a524;border-color:#f5a524}
+.dieta-corpo{flex:1;min-width:0;background:none;border:0;padding:4px 0;text-align:left;color:inherit;font:inherit;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+.dieta-corpo b{font-weight:600}
+.dieta-corpo small{color:var(--mudo,#8a8f98)}
+.dieta-item.passou .dieta-corpo small b{color:#f5a524}
+.dieta-ico{flex:none;width:28px;height:28px;margin:0 8px;border-radius:50%;background:#f5a524;color:#0f1114;display:grid;place-items:center;font-weight:800}
+.alerta-passou{background:rgba(245,165,36,.14);border:1px solid rgba(245,165,36,.5);border-radius:12px;padding:10px 12px;margin:8px 0;font-size:.92rem}
+.alerta-passou small{color:var(--mudo,#8a8f98)}
+.grande-in{font-size:1.6rem;text-align:center;font-weight:700}
+

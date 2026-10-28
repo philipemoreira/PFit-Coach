@@ -1,6 +1,6 @@
 // Guarda os arquivos do app no aparelho para ele abrir rápido e funcionar sem internet.
 // Toda vez que eu mudar o app, o número da versão sobe (NOME_DO_CACHE).
-const NOME_DO_CACHE = 'treino-v19';
+const NOME_DO_CACHE = 'treino-v21';
 
 const ARQUIVOS_ESSENCIAIS = [
   './', './index.html', './style.css', './manifest.json',
@@ -9,7 +9,7 @@ const ARQUIVOS_ESSENCIAIS = [
   './exercicios-base.js',
   './alimentos.js',
   './fotos.js',
-  './conta.js', './assinatura.js', './ajuda.js', './onboarding.js', './vinculo.js', './dicas.js', './video.js', './anilhas.js', './personal.js', './recados.js', './auth.js', './hoje.js', './treinos.js', './treinar.js',
+  './conta.js', './assinatura.js', './ajuda.js', './onboarding.js', './vinculo.js', './dicas.js', './video.js', './dietaplano.js', './anilhas.js', './personal.js', './recados.js', './auth.js', './hoje.js', './treinos.js', './treinar.js',
   './dieta.js', './progresso.js', './perfil.js',
   './icones/icone.svg', './icones/icone-180.png', './icones/icone-192.png', './icones/icone-512.png'
 ];
@@ -53,6 +53,9 @@ self.addEventListener('fetch', (evento) => {
     );
     return;
   }
+
+  // Vídeos passam direto (precisam de pedaços do arquivo e não devem ficar guardados no aparelho).
+  if (req.headers.has('range') || /\.(mp4|webm|mov|m4v)$/i.test(url.pathname)) return;
 
   // Só mexe nos arquivos do próprio app. O resto (banco de dados, login) passa direto.
   if (url.origin !== self.location.origin) return;

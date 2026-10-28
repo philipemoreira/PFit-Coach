@@ -9,6 +9,7 @@ import { nav } from './nav.js';
 import { grupoDoExercicio } from './exercicios-base.js';
 import { totaisDoDia } from './alimentos.js';
 import { abrirFotos } from './fotos.js';
+import { cumprimento as cumprimentoPlano } from './dietaplano.js';
 import { volumeSessao, volumeDoDia, metaVolume, metaPeso, sequenciaSemanas, formatarVolume, conquistas, metaMacros } from './metricas.js';
 
 let exercicioEscolhido = '';
@@ -24,24 +25,11 @@ function treinosNoPeriodo() {
   };
 }
 
-// Porcentagem das regras da dieta marcadas nos últimos 7 dias.
+// Porcentagem dos itens da dieta marcados nos últimos 7 dias (só conta os dias em que anotou algo).
 function cumprimentoDieta() {
-  let total = 0;
-  let feitas = 0;
-  for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const dia = dataLocal(d);
-    const fds = d.getDay() === 0 || d.getDay() === 6;
-    const regras = estado.regras.filter((r) => {
-      if (r.criadoEm && dataLocal(new Date(r.criadoEm)) > dia) return false;
-      return r.grupo === 'sempre' || r.grupo === (fds ? 'fds' : 'semana');
-    });
-    const c = estado.checks.find((x) => x.data === dia);
-    total += regras.length;
-    feitas += regras.filter((r) => c && c.feitas && c.feitas[r.id]).length;
-  }
-  return total ? Math.round((feitas / total) * 100) : null;
+  const datas = [];
+  for (let i = 0; i < 7; i++) { const d = new Date(); d.setDate(d.getDate() - i); datas.push(dataLocal(d)); }
+  return cumprimentoPlano(estado.dietaItens, estado.refeicoes, datas);
 }
 
 function exerciciosComCarga() {

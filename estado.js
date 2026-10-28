@@ -9,12 +9,14 @@ export const estado = {
   criandoConta: false,
   treinos: [],
   regras: [],
+  dietaItens: [],     // a lista fixa da dieta (por refeição)
   sessoes: [],
   peso: [],
   checks: [],
   agua: [],
   medidas: [],
   vinculo: null,      // se tenho um personal: { personalUid, personalNome, ... }
+  vinculoCarregado: false, // true depois que o app já soube se tem personal ou não
   metasConfig: null,  // metas definidas pelo meu personal
   recados: [],
   alunos: [],         // (para personal) vínculos dos meus alunos
@@ -63,6 +65,7 @@ export function iniciarDados(uid, email, aoMudar) {
 
   ouvir('treinos', 'treinos', [orderBy('ordem', 'asc')]);
   ouvir('regras', 'regras', [orderBy('ordem', 'asc')]);
+  ouvir('dietaItens', 'dietaItens', [orderBy('ordem', 'asc')]);
   ouvir('sessoes', 'sessoes', [orderBy('data', 'desc'), limit(400)]);
   ouvir('peso', 'peso', [orderBy('data', 'desc'), limit(400)]);
   ouvir('checks', 'checks', [orderBy('data', 'desc'), limit(60)]);
@@ -76,6 +79,7 @@ export function iniciarDados(uid, email, aoMudar) {
   // Meu vínculo com um personal (o documento tem o meu próprio código de usuário como nome).
   paradores.push(onSnapshot(doc(db, 'vinculos', uid), (snap) => {
     estado.vinculo = snap.exists() ? { ...snap.data() } : null;
+    estado.vinculoCarregado = true;
     ouvirAssinaturaDoPersonal(estado.vinculo ? estado.vinculo.personalUid : null, aoMudar);
     aoMudar('vinculo');
   }, (e) => console.error(e)));
@@ -131,12 +135,14 @@ export function pararDados() {
   estado.perfil = undefined;
   estado.treinos = [];
   estado.regras = [];
+  estado.dietaItens = [];
   estado.sessoes = [];
   estado.peso = [];
   estado.checks = [];
   estado.agua = [];
   estado.medidas = [];
   estado.vinculo = null;
+  estado.vinculoCarregado = false;
   estado.metasConfig = null;
   estado.recados = [];
   estado.alunos = [];
@@ -145,4 +151,10 @@ export function pararDados() {
   estado.refeicoes = [];
   estado.assinatura = undefined;
   estado.assinaturaPersonal = undefined;
+}
+
+// A dieta só é liberada para quem tem personal (ou é personal). Enquanto o app ainda não sabe, não tranca.
+export function dietaLiberada() {
+  if (!estado.vinculoCarregado || !estado.perfil) return true;
+  return !!estado.vinculo || estado.perfil.papel === 'personal';
 }

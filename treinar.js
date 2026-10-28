@@ -8,7 +8,7 @@ import { volumeDasSeries, maiorCargaAntes, formatarVolume } from './metricas.js'
 import { abrirAnilhas } from './anilhas.js';
 import { nav } from './nav.js';
 import { dicaDoExercicio } from './dicas.js';
-import { lerVideo, linkBusca, urlEmbed, urlMiniatura } from './video.js';
+import { lerVideo, urlEmbed, urlVimeo, urlMiniatura } from './video.js';
 
 let S = null; // treino em andamento
 let raiz = null;
@@ -171,7 +171,6 @@ function cartaoCardio(ex, i) {
 }
 
 const anteriorDe = (ex, j) => (ex.ultima && ex.ultima.series[j]) || null;
-const textoAnterior = (a) => (a ? `${a.carga != null ? formatarNumero(a.carga) : '—'} kg × ${a.reps != null ? formatarNumero(a.reps) : '—'}` : '');
 
 // Séries do exercício atual: uma linha por série (número, kg, reps, concluir).
 function htmlSeries(ex, i) {
@@ -202,20 +201,22 @@ function htmlMidia(ex) {
   if (ex.cardio) return '';
   const v = lerVideo(ex.video);
   const dica = dicaDoExercicio(ex.nome);
+  if (!v && !dica) return '';
   const oculto = videoOculto();
-  let corpo;
+  let corpo = '';
   if (v && v.tipo === 'youtube') {
-    corpo = `<button type="button" class="video-box" data-t="video-play" data-id="${escaparHtml(v.id)}" aria-label="Assistir ao vídeo de ${escaparHtml(ex.nome)}"><img src="${urlMiniatura(v.id)}" alt="" loading="lazy"><span class="video-play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></button>
-      <a class="video-link peq" href="${escaparHtml(v.url)}" target="_blank" rel="noopener noreferrer">Abrir no YouTube</a>`;
+    corpo = `<button type="button" class="video-box" data-t="video-play" data-id="${escaparHtml(v.id)}" aria-label="Assistir ao vídeo de ${escaparHtml(ex.nome)}"><img src="${urlMiniatura(v.id)}" alt="" loading="lazy"><span class="video-play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></button>`;
+  } else if (v && v.tipo === 'vimeo') {
+    corpo = `<div class="video-box tocando"><iframe src="${urlVimeo(v.id)}" title="Vídeo do exercício" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+  } else if (v && v.tipo === 'arquivo') {
+    corpo = `<div class="video-box tocando"><video controls playsinline preload="metadata" src="${escaparHtml(v.url)}" aria-label="Vídeo de ${escaparHtml(ex.nome)}"></video></div>`;
   } else if (v) {
     corpo = `<a class="video-link" href="${escaparHtml(v.url)}" target="_blank" rel="noopener noreferrer">▶ Abrir o vídeo do exercício</a>`;
-  } else {
-    corpo = `<a class="video-link" href="${escaparHtml(linkBusca(ex.nome))}" target="_blank" rel="noopener noreferrer">▶ Ver como fazer no YouTube</a>`;
   }
   return `
     <div class="midia">
-      <div class="midia-cab"><b>Vídeo do exercício</b><button type="button" class="link" data-t="video-toggle">${oculto ? 'Mostrar' : 'Recolher'}</button></div>
-      <div class="midia-corpo" ${oculto ? 'hidden' : ''}>${corpo}</div>
+      ${v ? `<div class="midia-cab"><b>Vídeo do exercício</b><button type="button" class="link" data-t="video-toggle">${oculto ? 'Mostrar' : 'Recolher'}</button></div>
+      <div class="midia-corpo" ${oculto ? 'hidden' : ''}>${corpo}</div>` : ''}
       ${dica ? `<details class="como-fazer"><summary>Como fazer</summary><p>${escaparHtml(dica.texto)}</p><p class="mudo peq">Dica geral. Se sentir dor (não é o cansaço normal do músculo), pare e procure um profissional.</p></details>` : ''}
     </div>`;
 }
@@ -410,6 +411,7 @@ function aoClicar(e) {
     const corpo = raiz.querySelector('.midia-corpo');
     const esconder = !corpo.hidden;
     corpo.hidden = esconder;
+    if (esconder) corpo.querySelectorAll('video').forEach((vd) => vd.pause());
     b.textContent = esconder ? 'Mostrar' : 'Recolher';
     try { localStorage.setItem('treino-video-oculto', esconder ? '1' : '0'); } catch { /* ok */ }
   } else if (acao === 'anilhas') {

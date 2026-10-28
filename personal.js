@@ -7,7 +7,8 @@ import { abrirFolha, confirmar } from './folha.js';
 import { escaparHtml, dataLocal, parseData, formatarDataCurta, formatarNumero, numero, novoId, toast, segundaDaSemana, DIAS_CURTOS, ORDEM_DIAS } from './util.js';
 import { salvarDoc, salvarGlobal, removerGlobal, salvarPerfil } from './dados.js';
 import { abrirEditorTreino } from './treinos.js';
-import { abrirEditorRegra } from './dieta.js';
+import { abrirEditorItem } from './dieta.js';
+import { MOMENTOS, ordenarPlano, analisarDia, textoPassou, cumprimento as cumprimentoPlano, descreverQtd } from './dietaplano.js';
 import { abrirRecados } from './recados.js';
 import { volumeSessao, formatarVolume } from './metricas.js';
 import { nav } from './nav.js';
@@ -23,17 +24,19 @@ let alunoAberto = null;
 let dados = vazio();
 let paradoresAluno = [];
 const resumo = {}; // uid -> sessoes recentes (para a lista)
+const resumoDieta = {}; // uid -> { plano, refeicoes } (para o aviso de "passou")
 const paradoresLista = {};
 let uidSync = null;
 
 function vazio() {
-  return { treinos: [], regras: [], sessoes: [], peso: [], checks: [], medidas: [], recados: [], refeicoes: [], metas: null, perfilAluno: null };
+  return { treinos: [], dietaItens: [], sessoes: [], peso: [], checks: [], medidas: [], recados: [], refeicoes: [], metas: null, perfilAluno: null };
 }
 
 export function pararPersonal() {
   Object.values(paradoresLista).forEach((p) => p());
   Object.keys(paradoresLista).forEach((k) => delete paradoresLista[k]);
   Object.keys(resumo).forEach((k) => delete resumo[k]);
+  Object.keys(resumoDieta).forEach((k) => delete resumoDieta[k]);
   paradoresAluno.forEach((p) => p());
   paradoresAluno = [];
   alunoAberto = null;
@@ -46,7 +49,7 @@ function sincronizarLista() {
   if (uidSync !== estado.uid) { pararPersonal(); uidSync = estado.uid; }
   const ids = new Set(estado.alunos.map((a) => a.id));
   Object.keys(paradoresLista).forEach((k) => {
-    if (!ids.has(k)) { paradoresLista[k](); delete paradoresLista[k]; delete resumo[k]; }
+    if (!ids.has(k)) { paradoresLista[k](); delete paradoresLista[k]; delete resumo[k]; delete resumoDieta[k]; }
   });
   ids.forEach((id) => {
     if (paradoresLista[id]) return;
@@ -55,6 +58,18 @@ function sincronizarLista() {
       resumo[id] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       nav.renderizar();
     }, (e) => { console.error(e); resumo[id] = resumo[id] || []; });
+    // Dieta do aluno (lista + o que ele comeu), só para avisar quando ele passou do combinado.
+    resumoDieta[id] = { plano: [], refeicoes: [] };
+    const pPlano = onSnapshot(query(collection(db, 'usuarios', id, 'dietaItens'), orderBy('ordem', 'asc')), (snap) => {
+      resumoDieta[id].plano = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      nav.renderizar();
+    }, (e) => console.error(e));
+    const pRef = onSnapshot(query(collection(db, 'usuarios', id, 'refeicoes'), orderBy('data', 'desc'), limit(7)), (snap) => {
+      resumoDieta[id].refeicoes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      nav.renderizar();
+    }, (e) => console.error(e));
+    const pSessoes = paradoresLista[id];
+    paradoresLista[id] = () => { pSessoes(); pPlano(); pRef(); };
   });
 }
 
@@ -69,7 +84,7 @@ function abrirDetalhe(uid) {
     }, (e) => console.error(e)));
   };
   ouvir('treinos', 'treinos', [orderBy('ordem', 'asc')]);
-  ouvir('regras', 'regras', [orderBy('ordem', 'asc')]);
+  ouvir('dietaItens', 'dietaItens', [orderBy('ordem', 'asc')]);
   ouvir('sessoes', 'sessoes', [orderBy('data', 'desc'), limit(60)]);
   ouvir('peso', 'peso', [orderBy('data', 'desc'), limit(60)]);
   ouvir('checks', 'checks', [orderBy('data', 'desc'), limit(30)]);
@@ -110,20 +125,15 @@ function situacao(vinculo) {
   return { ult, semana, dias: base, sumido: base >= DIAS_SUMIDO };
 }
 
-function cumprimentoDieta(regras, checks) {
-  let total = 0;
-  let feitas = 0;
-  for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const dia = dataLocal(d);
-    const fds = d.getDay() === 0 || d.getDay() === 6;
-    const aplic = regras.filter((r) => r.grupo === 'sempre' || r.grupo === (fds ? 'fds' : 'semana'));
-    const c = checks.find((x) => x.data === dia);
-    total += aplic.length;
-    feitas += aplic.filter((r) => c && c.feitas && c.feitas[r.id]).length;
-  }
-  return total ? Math.round((feitas / total) * 100) : null;
+const ultimosDatas = (n) => Array.from({ length: n }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - i); return dataLocal(d); });
+
+// O que o aluno passou hoje (para o aviso ao personal).
+function passouHoje(uid) {
+  const r = resumoDieta[uid];
+  if (!r) return null;
+  const hoje = r.refeicoes.find((x) => x.data === dataLocal());
+  const a = analisarDia(ordenarPlano(r.plano), (hoje && hoje.itens) || []);
+  return a.passou.length ? textoPassou(a) : null;
 }
 
 function gerarCodigo() {
@@ -181,6 +191,7 @@ function cartaoAluno(v) {
         <div><h2>${escaparHtml(nome)}</h2><p class="mudo peq">${escaparHtml(linha)}</p></div></div>
       ${!s.carregando && s.sumido ? `<span class="selo alerta">sumido há ${s.dias} dias</span>` : ''}
     </div>
+    ${passouHoje(v.id) ? `<p class="alerta-passou" role="status">⚠️ Passou da dieta hoje: ${escaparHtml(passouHoje(v.id))}</p>` : ''}
     <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="p-aluno-abrir" data-id="${escaparHtml(v.id)}">Abrir aluno</button></div>
   </section>`;
 }
@@ -198,9 +209,11 @@ function cartaoModelos() {
 function listaAlunos() {
   sincronizarLista();
   const sumidos = estado.alunos.filter((v) => { const s = situacao(v); return !s.carregando && s.sumido; });
+  const passaram = estado.alunos.filter((v) => passouHoje(v.id));
   return `
   <header class="topo"><h1>Alunos</h1></header>
   ${avisoFaixa()}
+  ${passaram.length ? `<p class="alerta-passou" role="status">⚠️ ${passaram.length === 1 ? '1 aluno passou' : passaram.length + ' alunos passaram'} da dieta hoje: ${escaparHtml(passaram.map((v) => v.alunoNome || 'Aluno').join(', '))}.</p>` : ''}
   ${cartaoConvite()}
   ${sumidos.length ? `<p class="alerta-atraso" role="status">⚠️ ${sumidos.length} ${sumidos.length === 1 ? 'aluno está' : 'alunos estão'} há ${DIAS_SUMIDO} dias ou mais sem treinar: ${escaparHtml(sumidos.map((v) => v.alunoNome || 'Aluno').join(', '))}.</p>` : ''}
   ${estado.alunos.length
@@ -223,6 +236,15 @@ function blocoMacrosAluno(m) {
     Média dos últimos ${recentes.length} ${recentes.length === 1 ? 'dia anotado' : 'dias anotados'}: <strong>${media.toLocaleString('pt-BR')} kcal</strong></p>`;
 }
 
+function blocoPassou(plano) {
+  const dias = ultimosDatas(7).map((data) => {
+    const r = dados.refeicoes.find((x) => x.data === data);
+    return { data, anotou: !!(r && (r.itens || []).length), a: analisarDia(plano, (r && r.itens) || []) };
+  }).filter((d) => d.anotou && d.a.passou.length);
+  if (!dias.length) return '<p class="mudo peq">Nos últimos 7 dias ele não passou do combinado.</p>';
+  return `<h3 class="sub">Passou do combinado (7 dias)</h3><div class="lista">${dias.map((d) => `<div class="linha-peso"><span>${formatarDataCurta(d.data)}<br><small class="mudo">${escaparHtml(textoPassou(d.a))}</small></span></div>`).join('')}</div>`;
+}
+
 function detalhe(v) {
   const nome = v.alunoNome || v.alunoEmail || 'Aluno';
   const segunda = dataLocal(segundaDaSemana());
@@ -231,12 +253,12 @@ function detalhe(v) {
   const semana = sess.filter((s) => s.data >= segunda).length;
   const noMes = sess.filter((s) => String(s.data).startsWith(mes)).length;
   const volSemana = sess.filter((s) => s.data >= segunda).reduce((n, s) => n + volumeSessao(s), 0);
-  const dieta = cumprimentoDieta(dados.regras, dados.checks);
+  const planoAluno = ordenarPlano(dados.dietaItens);
+  const dieta = cumprimentoPlano(planoAluno, dados.refeicoes, ultimosDatas(7));
   const ult = ultimaSessao(sess);
   const peso = [...dados.peso].sort((a, b) => String(b.data).localeCompare(String(a.data)))[0];
   const m = dados.metas || {};
   const medida = [...dados.medidas].sort((a, b) => String(b.data).localeCompare(String(a.data)))[0];
-  const GR = [['sempre', 'Todos os dias'], ['semana', 'Dia a dia'], ['fds', 'Fim de semana']];
   return `
   <header class="topo">
     <button class="btn pequeno secundario" type="button" data-acao="p-aluno-voltar">‹ Alunos</button>
@@ -263,12 +285,11 @@ function detalhe(v) {
       <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="p-treino-modelo-usar">Usar um modelo</button></div>
     </section>
     <section class="card">
-      <h2>Dieta dele</h2>
-      ${GR.map(([g, tit]) => {
-    const rs = dados.regras.filter((r) => r.grupo === g).sort((a, b) => (a.horario || '99').localeCompare(b.horario || '99') || (a.ordem || 0) - (b.ordem || 0));
-    return `<div class="grupo-regras"><div class="card-topo"><h3>${tit}</h3><button class="link" type="button" data-acao="p-regra-nova" data-grupo="${g}">+ regra</button></div>
-        ${rs.length ? `<div class="lista">${rs.map((r) => `<button type="button" class="regra-linha" data-acao="p-regra-editar" data-id="${escaparHtml(r.id)}">${r.horario ? `<small class="hora">${escaparHtml(r.horario)}</small>` : ''}<span>${escaparHtml(r.texto)}</span><span class="seta" aria-hidden="true">›</span></button>`).join('')}</div>` : '<p class="mudo peq">Nenhuma.</p>'}</div>`;
-  }).join('')}
+      <div class="card-topo"><h2>Dieta dele</h2><button class="btn pequeno" type="button" data-acao="p-dieta-item-novo">+ Item</button></div>
+      <p class="mudo peq">Lista fixa, igual todos os dias. Ele só marca o que comeu.</p>
+      ${planoAluno.length ? MOMENTOS.map((m) => [m, planoAluno.filter((p) => p.momento === m)]).filter(([, l]) => l.length).map(([m, l]) => `<div class="grupo-regras"><div class="card-topo"><h3>${m}</h3><button class="link" type="button" data-acao="p-dieta-item-novo" data-momento="${m}">+ item</button></div>
+        <div class="lista">${l.map((p) => `<button type="button" class="regra-linha" data-acao="p-dieta-item-editar" data-id="${escaparHtml(p.id)}"><span>${escaparHtml(p.nome)}<br><small class="mudo">${escaparHtml(descreverQtd(p.qtd, p.unidade))}${p.kcal ? ` · ${formatarNumero(p.kcal)} kcal` : ''}</small></span><span class="seta" aria-hidden="true">›</span></button>`).join('')}</div></div>`).join('') : '<p class="mudo vazio-peq">Nenhum item ainda.</p>'}
+      ${blocoPassou(planoAluno)}
     </section>
     <section class="card">
       <h2>Metas dele</h2>
@@ -377,10 +398,10 @@ export const personal = {
         toast('Treino aplicado ao aluno.');
       });
     },
-    'p-regra-nova': (el) => { if (alunoAberto) abrirEditorRegra(el.dataset.grupo, null, alunoAberto); },
-    'p-regra-editar': (el) => {
-      const r = dados.regras.find((x) => x.id === el.dataset.id);
-      if (r) abrirEditorRegra(r.grupo, r, alunoAberto);
+    'p-dieta-item-novo': (el) => { if (alunoAberto) abrirEditorItem(el.dataset.momento, null, alunoAberto); },
+    'p-dieta-item-editar': (el) => {
+      const p = dados.dietaItens.find((x) => x.id === el.dataset.id);
+      if (p) abrirEditorItem(p.momento, p, alunoAberto);
     },
     'p-aluno-fotos': () => {
       const v = atual();

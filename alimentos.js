@@ -4,8 +4,9 @@ import { abrirFolha, confirmar } from './folha.js';
 import { escaparHtml, dataLocal, numero, formatarNumero, novoId, toast } from './util.js';
 import { salvarDoc, removerDoc } from './dados.js';
 import { metaMacros } from './metricas.js';
+import { MOMENTOS, descreverItem } from './dietaplano.js';
 
-export const MOMENTOS = ['Café da manhã', 'Almoço', 'Lanche', 'Jantar', 'Ceia', 'Outro'];
+export { MOMENTOS };
 
 const r1 = (n) => Math.round(n * 10) / 10;
 
@@ -43,7 +44,7 @@ export function blocoMacros() {
     <div class="minimacros">${minimacro('Proteína', t.prot, m.prot)}${minimacro('Carbo', t.carb, m.carb)}${minimacro('Gordura', t.gord, m.gord)}</div>
     <div class="acoes-card linha">
       <button class="btn secundario" type="button" data-acao="comida-dia">Ver o dia</button>
-      <button class="btn" type="button" data-acao="comida-adicionar">+ Alimento</button>
+      <button class="btn" type="button" data-acao="dieta-fora">+ Outra coisa</button>
     </div>
   </section>`;
 }
@@ -54,7 +55,7 @@ export function blocoAlimentos() {
   return `
   <section class="card larga">
     <div class="card-topo"><h2>Meus alimentos</h2><button class="btn pequeno" type="button" data-acao="alimento-novo">+ Novo</button></div>
-    <p class="mudo peq">Cadastre os alimentos que você come, com os valores de uma porção (veja no rótulo ou na sua tabela). Depois é só escolher e dizer quantas porções comeu.</p>
+    <p class="mudo peq">Alimentos com os valores de uma porção (veja no rótulo ou na sua tabela). Servem para preencher a lista da dieta e o “comi outra coisa” mais rápido.</p>
     ${lista.length ? `<div class="lista">${lista.map((a) => `<button type="button" class="regra-linha" data-acao="alimento-editar" data-id="${escaparHtml(a.id)}"><span>${escaparHtml(a.nome)}<br><small class="mudo">${escaparHtml(a.porcao || '1 porção')} · ${formatarNumero(a.kcal)} kcal · P ${formatarNumero(a.prot)} · C ${formatarNumero(a.carb)} · G ${formatarNumero(a.gord)}</small></span><span class="seta" aria-hidden="true">›</span></button>`).join('')}</div>` : '<p class="mudo vazio-peq">Nenhum alimento ainda.</p>'}
   </section>`;
 }
@@ -108,53 +109,6 @@ export function abrirEditorAlimento(alimento, aoSalvar) {
   });
 }
 
-function abrirAdicionar() {
-  if (!estado.alimentos.length) {
-    toast('Cadastre um alimento primeiro.');
-    abrirEditorAlimento(null, () => setTimeout(abrirAdicionar, 300));
-    return;
-  }
-  const f = abrirFolha(`
-    <h2>Adicionar alimento</h2>
-    <label class="campo">Alimento
-      <select class="in" data-f="alimento">${estado.alimentos.map((a) => `<option value="${escaparHtml(a.id)}">${escaparHtml(a.nome)} (${escaparHtml(a.porcao || '1 porção')})</option>`).join('')}</select>
-    </label>
-    <div class="grade2">
-      <label class="campo">Quantas porções?<input class="in" inputmode="decimal" data-f="porcoes" value="1"></label>
-      <label class="campo">Refeição<select class="in" data-f="momento">${MOMENTOS.map((m) => `<option>${m}</option>`).join('')}</select></label>
-    </div>
-    <p class="mudo" id="previa-comida"></p>
-    <p class="erro" data-erro role="alert"></p>
-    <button class="link" type="button" data-ed="novo">+ Cadastrar outro alimento</button>
-    <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Cancelar</button><button class="btn" type="button" data-ed="salvar">Adicionar</button></div>`);
-  const q = (n) => f.el.querySelector(`[data-f="${n}"]`);
-  const alvo = () => estado.alimentos.find((a) => a.id === q('alimento').value);
-  const pintar = () => {
-    const a = alvo();
-    const p = numero(q('porcoes').value);
-    f.el.querySelector('#previa-comida').textContent = a && p ? `${Math.round(a.kcal * p)} kcal · P ${formatarNumero(r1(a.prot * p))} g · C ${formatarNumero(r1(a.carb * p))} g · G ${formatarNumero(r1(a.gord * p))} g` : '';
-  };
-  f.el.addEventListener('input', pintar);
-  f.el.addEventListener('change', pintar);
-  pintar();
-  f.el.addEventListener('click', async (e) => {
-    const b = e.target.closest('[data-ed]');
-    if (!b) return;
-    if (b.dataset.ed === 'novo') { f.fechar(); abrirEditorAlimento(null, () => setTimeout(abrirAdicionar, 300)); return; }
-    const a = alvo();
-    const p = numero(q('porcoes').value);
-    if (!a || p === null || p <= 0 || p > 50) { f.el.querySelector('[data-erro]').textContent = 'Informe quantas porções (número maior que zero).'; return; }
-    const data = dataLocal();
-    const itens = [...itensDoDia(data), {
-      id: novoId(), nome: a.nome, porcoes: p, momento: q('momento').value,
-      kcal: Math.round(a.kcal * p), prot: r1(a.prot * p), carb: r1(a.carb * p), gord: r1(a.gord * p)
-    }];
-    await salvarDoc(estado.uid, 'refeicoes', data, { data, itens, atualizadoEm: new Date().toISOString() });
-    f.fechar();
-    toast('Adicionado.');
-  });
-}
-
 function abrirDia() {
   const data = dataLocal();
   const f = abrirFolha('<div id="dia-comida"></div>', { classe: 'folha-alta' });
@@ -167,8 +121,8 @@ function abrirDia() {
       <h2>O que você comeu hoje</h2>
       <p class="grande">${t.kcal.toLocaleString('pt-BR')} <small>kcal</small></p>
       <p class="mudo peq">P ${formatarNumero(t.prot)} g · C ${formatarNumero(t.carb)} g · G ${formatarNumero(t.gord)} g</p>
-      ${grupos.length ? grupos.map(([m, l]) => `<h3 class="sub">${m}</h3><div class="lista">${l.map((i) => `<div class="linha-peso"><span>${escaparHtml(i.nome)}<br><small class="mudo">${formatarNumero(i.porcoes)}× · P ${formatarNumero(i.prot)} · C ${formatarNumero(i.carb)} · G ${formatarNumero(i.gord)}</small></span><strong>${i.kcal} kcal</strong><button type="button" class="icone-peq" data-del="${escaparHtml(i.id)}" aria-label="Remover ${escaparHtml(i.nome)}">✕</button></div>`).join('')}</div>`).join('') : '<p class="mudo vazio-peq">Nada registrado hoje.</p>'}
-      <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Fechar</button><button class="btn" type="button" data-ed="add">+ Alimento</button></div>`;
+      ${grupos.length ? grupos.map(([m, l]) => `<h3 class="sub">${m}</h3><div class="lista">${l.map((i) => `<div class="linha-peso"><span>${escaparHtml(i.nome)}<br><small class="mudo">${escaparHtml(descreverItem(i))}${i.fora || !i.planoId ? ' · fora da lista' : ''} · P ${formatarNumero(i.prot)} · C ${formatarNumero(i.carb)} · G ${formatarNumero(i.gord)}</small></span><strong>${i.kcal} kcal</strong><button type="button" class="icone-peq" data-del="${escaparHtml(i.id)}" aria-label="Remover ${escaparHtml(i.nome)}">✕</button></div>`).join('')}</div>`).join('') : '<p class="mudo vazio-peq">Nada registrado hoje.</p>'}
+      <div class="linha-botoes"><button class="btn" type="button" data-fechar>Fechar</button></div>`;
     if (html !== ultimo) { ultimo = html; f.el.querySelector('#dia-comida').innerHTML = html; }
   };
   pintar();
@@ -179,15 +133,11 @@ function abrirDia() {
       const itens = itensDoDia(data).filter((i) => i.id !== del.dataset.del);
       await salvarDoc(estado.uid, 'refeicoes', data, { data, itens, atualizadoEm: new Date().toISOString() });
       pintar();
-    } else if (e.target.closest('[data-ed="add"]')) {
-      f.fechar();
-      abrirAdicionar();
     }
   });
 }
 
 export const acoesAlimentos = {
-  'comida-adicionar': () => abrirAdicionar(),
   'comida-dia': () => abrirDia(),
   'alimento-novo': () => abrirEditorAlimento(null),
   'alimento-editar': (el) => {

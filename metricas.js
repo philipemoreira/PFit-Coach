@@ -1,6 +1,7 @@
 // Contas do app: volume levantado, recordes e sequência de semanas.
 import { estado } from './estado.js';
-import { dataLocal, segundaDaSemana, parseData } from './util.js';
+import { dataLocal, segundaDaSemana } from './util.js';
+import { diaPerfeito as dietaPerfeita } from './dietaplano.js';
 
 export const norm = (s) => String(s || '').trim().toLowerCase();
 
@@ -96,13 +97,7 @@ export function conquistas() {
   const aguaOk = !!ma && estado.agua.some((a) => a.ml >= ma);
   const volOk = !!mv && [...diasVol.values()].some((v) => v >= mv);
   const seq = sequenciaSemanas().semanas;
-  const diaPerfeito = estado.checks.some((c) => {
-    const d = c.data ? parseData(c.data) : null;
-    if (!d) return false;
-    const g = d.getDay() === 0 || d.getDay() === 6 ? 'fds' : 'semana';
-    const regras = estado.regras.filter((r) => r.grupo === 'sempre' || r.grupo === g);
-    return regras.length > 0 && regras.every((r) => c.feitas && c.feitas[r.id]);
-  });
+  const diaPerfeito = estado.refeicoes.some((r) => dietaPerfeita(estado.dietaItens, r.itens));
   const L = [
     ['🏁', 'Primeiro treino', 'Termine 1 treino', nTreinos >= 1],
     ['💪', '10 treinos', 'Termine 10 treinos', nTreinos >= 10],
@@ -116,7 +111,7 @@ export function conquistas() {
     ['📅', '2 semanas seguidas', 'Cumpra seus dias de treino 2 semanas seguidas', seq >= 2],
     ['🗓️', '4 semanas seguidas', 'Cumpra seus dias de treino 4 semanas seguidas', seq >= 4],
     ['💧', 'Meta de água', 'Bata sua meta de água (defina no Perfil)', aguaOk],
-    ['🥗', 'Dia perfeito', 'Cumpra todas as regras da dieta num dia', diaPerfeito],
+    ['🥗', 'Dia perfeito', 'Marque todos os itens da dieta num dia, sem passar do previsto', diaPerfeito],
     ['📏', 'Medidas em dia', 'Registre suas medidas do corpo', estado.medidas.length >= 1]
   ];
   return L.map(([icone, nome, desc, ok]) => ({ icone, nome, desc, ok }));

@@ -1,6 +1,7 @@
 // Ponto de partida do app: decide qual tela mostrar e liga os cliques às ações.
 import { configurado, auth, onAuthStateChanged, signOut } from './firebase.js';
-import { estado, iniciarDados, pararDados } from './estado.js';
+import { estado, iniciarDados, pararDados, dietaLiberada } from './estado.js';
+import { toast, escaparHtml } from './util.js';
 import { nav } from './nav.js';
 import { htmlEntrada, htmlCompletar, htmlCarregando, htmlSemConfig, acoesAuth, formsAuth } from './auth.js';
 import { hoje } from './hoje.js';
@@ -15,7 +16,6 @@ import { abrirBoasVindas } from './ajuda.js';
 import { abrirOnboarding } from './onboarding.js';
 import { treinoAberto } from './treinar.js';
 import { aplicarTema } from './tema.js';
-import { escaparHtml } from './util.js';
 
 aplicarTema();
 const app = document.getElementById('app');
@@ -51,12 +51,14 @@ TELAS.forEach(({ tela }) => {
 });
 ACOES.aba = (el) => nav.irPara(el.dataset.aba);
 ACOES.voltar = () => nav.voltar();
+ACOES['dieta-trancada'] = () => toast('A dieta é liberada quando você tem um personal. Ele monta a sua dieta para você.');
 ACOES['sair-direto'] = () => signOut(auth);
 
 const souPersonal = () => !!(estado.perfil && estado.perfil.papel === 'personal');
 // Com a assinatura vencida só ficam Minha conta e Configurações (sem menu de baixo).
 const abasVisiveis = () => (bloqueado() ? [] : ABAS.filter((a) => !a.soPersonal || souPersonal()));
 let navAssinatura = '';
+const assinaturaMenu = () => abasVisiveis().map((a) => a.id).join(',') + (dietaLiberada() ? '' : ':sem-dieta');
 
 let telaAtual = ''; // 'entrada' | 'carregando' | 'completar' | 'principal' | 'config'
 let abaAtual = 'hoje';
@@ -76,7 +78,9 @@ function animarEntrada() {
 function htmlNav() {
   return `
         <div class="nav-marca" aria-hidden="true"><svg viewBox="0 0 512 512"><rect width="512" height="512" rx="110" fill="#181b22"/><g fill="#c6f432"><rect x="196" y="236" width="120" height="40" rx="8"/><rect x="150" y="176" width="46" height="160" rx="14"/><rect x="316" y="176" width="46" height="160" rx="14"/><rect x="108" y="206" width="34" height="100" rx="12"/><rect x="370" y="206" width="34" height="100" rx="12"/></g></svg><b>Treino</b></div>
-        ${abasVisiveis().map((a) => `<button type="button" class="nav-btn" data-acao="aba" data-aba="${a.id}" aria-label="${a.nome}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONES[a.id]}</svg><span>${a.nome}</span></button>`).join('')}`;
+        ${abasVisiveis().map((a) => (a.id === 'dieta' && !dietaLiberada()
+    ? `<button type="button" class="nav-btn trancado" data-acao="dieta-trancada" aria-disabled="true" aria-label="Dieta (bloqueada: precisa de um personal)"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONES[a.id]}</svg><span>Dieta</span><svg class="cadeado" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>`
+    : `<button type="button" class="nav-btn" data-acao="aba" data-aba="${a.id}" aria-label="${a.nome}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONES[a.id]}</svg><span>${a.nome}</span></button>`)).join('')}`;
 }
 
 function htmlBarra() {
@@ -90,7 +94,7 @@ function htmlBarra() {
 }
 
 function montarPrincipal() {
-  navAssinatura = abasVisiveis().map((a) => a.id).join(',');
+  navAssinatura = assinaturaMenu();
   app.innerHTML = `
     <div class="shell">
       <header id="topbar" class="topbar">${htmlBarra()}</header>
@@ -113,12 +117,13 @@ function renderizar() {
   const conteudo = document.getElementById('conteudo');
   if (!conteudo) return;
   // Se a lista de abas mudou (ex.: a pessoa virou personal), refaz o menu.
-  const assin = abasVisiveis().map((a) => a.id).join(',');
+  const assin = assinaturaMenu();
   if (assin !== navAssinatura) {
     navAssinatura = assin;
     const menu = document.querySelector('.nav');
     if (menu) { menu.innerHTML = htmlNav(); menu.hidden = abasVisiveis().length === 0; }
   }
+  if (abaAtual === 'dieta' && !dietaLiberada()) abaAtual = 'hoje';
   if (!ehExtra(abaAtual) && !abasVisiveis().some((a) => a.id === abaAtual)) abaAtual = abasVisiveis().length ? abasVisiveis()[0].id : 'conta';
   const barra = document.getElementById("topbar");
   if (barra) barra.innerHTML = htmlBarra();
@@ -143,6 +148,7 @@ function agendarRender() {
 }
 
 nav.irPara = (id) => {
+  if (id === 'dieta' && !dietaLiberada()) return;
   if (!ehExtra(id) && !abasVisiveis().some((a) => a.id === id)) return;
   const mudou = id !== abaAtual;
   if (mudou) { if (ehExtra(id)) pilha.push(abaAtual); else pilha = []; }

@@ -4,19 +4,16 @@ import { abrirFolha, confirmar } from './folha.js';
 import { escaparHtml, dataLocal, formatarDataLonga, segundaDaSemana } from './util.js';
 import { salvarDoc } from './dados.js';
 import { rascunhoSalvo, retomarTreino, descartarRascunho } from './treinar.js';
-import { regrasDoDia } from './dieta.js';
+import { blocoRegistro, planoDaDieta } from './dieta.js';
+import { analisarDia } from './dietaplano.js';
+import { dietaLiberada } from './estado.js';
 import { nav } from './nav.js';
 import { blocoRecadosHoje } from './recados.js';
-import { blocoMacros } from './alimentos.js';
+import { blocoMacros, itensDoDia } from './alimentos.js';
 import { avisoAssinatura } from './assinatura.js';
 import { volumeDoDia, metaVolume, metaAgua, aguaDoDia, sequenciaSemanas, formatarVolume } from './metricas.js';
 
 const LETRAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']; // segunda a domingo
-
-function marcadasHoje() {
-  const c = estado.checks.find((x) => x.data === dataLocal());
-  return (c && c.feitas) || {};
-}
 
 function blocoRascunho() {
   const r = rascunhoSalvo();
@@ -89,21 +86,26 @@ function blocoHero() {
 }
 
 function blocoTiles() {
-  const regras = regrasDoDia();
-  const marcadas = marcadasHoje();
-  const feitas = regras.filter((r) => marcadas[r.id]).length;
-  const pct = regras.length ? feitas / regras.length : 0;
+  const dia = analisarDia(planoDaDieta(), itensDoDia());
+  const feitas = dia.feitos;
+  const pct = dia.total ? feitas / dia.total : 0;
   const CIRC = 2 * Math.PI * 37;
   const semana = dataLocal(segundaDaSemana());
   const treinosSemana = estado.sessoes.filter((s) => s.data >= semana).length;
-  return `
+  const tileDieta = dietaLiberada() ? `
   <article class="tile">
-    <div class="anel" role="img" aria-label="Dieta de hoje: ${feitas} de ${regras.length} regras">
+    <div class="anel" role="img" aria-label="Dieta de hoje: ${feitas} de ${dia.total} itens">
       <svg viewBox="0 0 92 92"><circle class="fundo" cx="46" cy="46" r="37"/><circle class="valor" cx="46" cy="46" r="37" stroke-dasharray="${(pct * CIRC).toFixed(1)} ${CIRC.toFixed(1)}"/></svg>
-      <b>${feitas}/${regras.length}</b>
+      <b>${feitas}/${dia.total}</b>
     </div>
     <span class="rotulo">Dieta de hoje</span>
-  </article>
+  </article>` : `
+  <article class="tile tile-trancado" aria-label="Dieta bloqueada: precisa de um personal">
+    <svg class="cadeado-grande" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+    <span class="rotulo">Dieta<br>com seu personal</span>
+  </article>`;
+  return `
+  ${tileDieta}
   <article class="tile">
     <span class="numero">${treinosSemana}</span>
     <span class="rotulo">treino${treinosSemana === 1 ? '' : 's'} na semana</span>
@@ -138,38 +140,6 @@ function blocoDia() {
   </div>`;
 }
 
-function blocoChecklist() {
-  const regras = regrasDoDia();
-  if (!regras.length) {
-    return `
-    <section class="card">
-      <h2>Dieta de hoje</h2>
-      ${estado.vinculo
-    ? '<p class="mudo">Seu personal ainda não cadastrou regras para hoje.</p>'
-    : '<p class="mudo">Você ainda não cadastrou regras para hoje.</p><button class="btn secundario cheio" type="button" data-acao="regra-nova" data-grupo="sempre">Cadastrar regras</button>'}
-    </section>`;
-  }
-  const marcadas = marcadasHoje();
-  const agora = new Date();
-  const hhmm = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
-  const atrasada = (r) => !!r.horario && r.horario < hhmm && !marcadas[r.id];
-  const nAtrasadas = regras.filter(atrasada).length;
-  return `
-  <section class="card">
-    <h2>Regras de hoje</h2>
-    ${nAtrasadas ? `<p class="alerta-atraso" role="status">⏰ ${nAtrasadas} ${nAtrasadas === 1 ? 'regra passou' : 'regras passaram'} do horário sem marcar. Se já cumpriu, marque; se pulou, tudo bem, siga o resto do dia.</p>` : ''}
-    <div class="lista">
-      ${regras.map((r) => {
-        const on = !!marcadas[r.id];
-        return `<button type="button" class="regra-item ${on ? 'feita' : ''} ${atrasada(r) ? 'atrasada' : ''}" role="checkbox" aria-checked="${on}" data-acao="regra-marcar" data-id="${escaparHtml(r.id)}">
-          <span class="caixa">${on ? '✔' : ''}</span>
-          <span class="regra-txt">${r.horario ? `<small class="hora">${escaparHtml(r.horario)}${atrasada(r) ? ' · atrasada' : ''}</small>` : ''}${escaparHtml(r.texto)}</span>
-        </button>`;
-      }).join('')}
-    </div>
-  </section>`;
-}
-
 export const hoje = {
   render() {
     const nome = ((estado.perfil && estado.perfil.nome) || '').split(' ')[0];
@@ -186,18 +156,12 @@ export const hoje = {
       ${blocoTiles()}
     </section>
     ${blocoDia()}
-    <div class="grade-cards">${blocoMacros()}${blocoRecadosHoje()}</div>
-    ${blocoChecklist()}`;
+    <div class="grade-cards">${dietaLiberada() ? blocoMacros() : ''}${blocoRecadosHoje()}</div>
+    ${dietaLiberada() ? blocoRegistro() : ''}`;
   },
   acoes: {
     'agua-mais': () => { const d = dataLocal(); salvarDoc(estado.uid, 'agua', d, { data: d, ml: aguaDoDia(d) + 250 }); },
     'agua-menos': () => { const d = dataLocal(); salvarDoc(estado.uid, 'agua', d, { data: d, ml: Math.max(0, aguaDoDia(d) - 250) }); },
-    'regra-marcar': (el) => {
-      const id = el.dataset.id;
-      const data = dataLocal();
-      const atual = !!marcadasHoje()[id];
-      salvarDoc(estado.uid, 'checks', data, { data, feitas: { [id]: !atual } }, { merge: true });
-    },
     'treino-outro': () => {
       if (!estado.treinos.length) return;
       abrirFolha(`

@@ -23,9 +23,9 @@ export function abrirAjuda() {
   const html = `
     <h2>Ajuda</h2>
     <p class="mudo peq">Toque em um assunto para abrir.</p>
-    ${topico('Como o app funciona', '<p>O app tem 4 abas: <b>Hoje</b> (o que fazer agora), <b>Treinos</b> (seus treinos), <b>Dieta</b> (regras e alimentos) e <b>Progresso</b> (gráficos e histórico). Toque na sua inicial, no canto de cima, para abrir <b>Minha conta</b> e as <b>Configurações</b> (tema, metas, backup).' + (personal ? ' Como você é personal, também tem a aba <b>Alunos</b>.' : '') + '</p>')}
+    ${topico('Como o app funciona', '<p>O app tem 4 abas: <b>Hoje</b> (o que fazer agora), <b>Treinos</b> (seus treinos), <b>Dieta</b> (lista de alimentos por refeição) e <b>Progresso</b> (gráficos e histórico). Toque na sua inicial, no canto de cima, para abrir <b>Minha conta</b> e as <b>Configurações</b> (tema, metas, backup).' + (personal ? ' Como você é personal, também tem a aba <b>Alunos</b>.' : '') + '</p>')}
     ${topico('Fazer um treino', '<p>Na aba <b>Hoje</b>, toque em <b>Começar</b> no treino do dia. Marque cada série como feita, digite a carga e as repetições. O descanso começa sozinho. No fim, toque em <b>Finalizar</b>.</p><p>Toque no número da série para marcar <b>A</b> (aquecimento, não conta no volume), <b>D</b> (drop) ou <b>F</b> (falha). O botão <b>?</b> ao lado do nome do exercício mostra como fazer.</p>')}
-    ${topico('Montar treino e dieta', '<p>Em <b>Treinos</b>, toque em <b>Novo treino</b>, escolha os dias e adicione os exercícios (as sugestões aparecem enquanto você digita). Em <b>Dieta</b>, crie regras por horário e cadastre seus alimentos para anotar as calorias.</p><p>Se você tem um personal, ele monta seu treino e sua dieta, e você só executa.</p>')}
+    ${topico('Montar treino e dieta', '<p>Em <b>Treinos</b>, toque em <b>Novo treino</b>, escolha os dias e adicione os exercícios (as sugestões aparecem enquanto você digita). Em <b>Dieta</b>, monte a lista de alimentos de cada refeição. A lista é igual todos os dias: você só toca no quadrado quando comer o previsto, ou diz outra quantidade.</p><p>Se você tem um personal, ele monta seu treino e sua dieta, e você só executa.</p>')}
     ${topico('Calorias, água e metas', '<p>Na aba <b>Hoje</b> você anota a água e o que comeu. As metas (volume, água, peso, calorias) ficam em <b>Configurações → Metas</b>. Se você tem personal, ele define as suas metas.</p>')}
     ${topico('Progresso e fotos', '<p>Em <b>Progresso</b> você vê treinos da semana, volume levantado, peso, medidas, calorias e conquistas. As fotos do corpo ficam guardadas só para você, a não ser que escolha compartilhar com seu personal.</p>')}
     ${topico('Conectar com um personal', '<p>Peça o código de 8 letras ao seu personal e digite em <b>Minha conta → Tenho um código de personal</b>. Para se desligar, use o mesmo lugar. Seus dados ficam com você.</p>')}
@@ -46,7 +46,7 @@ export function abrirAjuda() {
 const PASSOS = [
   ['👋', 'Bem-vindo ao Treino', 'Treino, dieta e progresso num lugar só, simples de usar no celular e no computador.'],
   ['🏋️', 'Treine sem complicação', 'Abra a aba Hoje, toque em Começar, marque as séries e deixe o descanso por conta do app. Ele guarda suas cargas e mostra quando você bate um recorde.'],
-  ['🍎', 'Dieta, água e calorias', 'Marque as regras da dieta, anote a água e o que comeu. Defina metas em Configurações e acompanhe tudo em Progresso.'],
+  ['🍎', 'Dieta, água e calorias', 'Marque o que comeu da lista da dieta, anote a água. Defina metas em Configurações e acompanhe tudo em Progresso.'],
   ['🤝', 'Tem um personal?', 'Em Minha conta (toque na sua inicial, no topo), digite o código que ele te passou. Ele monta seu treino e sua dieta, e você só executa.']
 ];
 
