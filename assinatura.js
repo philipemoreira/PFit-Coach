@@ -1,11 +1,11 @@
-// Assinatura: 1 mês grátis para conta nova; aluno de personal usa de graça enquanto o personal estiver em dia.
+// Assinatura: 15 dias grátis para conta nova; aluno de personal usa de graça enquanto o personal estiver em dia.
 // A liberação é manual por enquanto: o dono do app muda o campo "ate" no console do Firebase.
 import { estado } from './estado.js';
 import { escaparHtml } from './util.js';
 
 export const PRECOS = { aluno: 19.9, p5: 49.9, p15: 89.9, ilimitado: 129.9 };
 export const LIMITES = { p5: 5, p15: 15 };
-export const DIAS_TESTE = 30;
+export const DIAS_TESTE = 15;
 // Preencha com a forma de pagamento (ex.: "Pix: ..." ou um link). Enquanto estiver vazio, o app só pede para falar com você.
 export const COMO_PAGAR = '';
 
@@ -25,7 +25,7 @@ export function faixaPorAlunos(n) {
 
 // { estado: 'carregando' | 'ativo' | 'vencido', origem: 'proprio' | 'personal', ate, dias, plano }
 export function acesso() {
-  // null = ainda não existe: o app está criando o mês grátis agora.
+  // null = ainda não existe: o app está criando o teste grátis agora.
   if (estado.assinatura === undefined || estado.assinatura === null) return { estado: 'carregando' };
   if (estado.vinculo) {
     if (estado.assinaturaPersonal === undefined) return { estado: 'carregando' };
@@ -73,7 +73,7 @@ export function blocoAssinatura() {
   }
   const teste = a.plano === 'teste';
   return `<section class="card"><h2>Assinatura</h2>
-    <p>${teste ? 'Mês grátis de teste' : 'Plano ativo'} · vale até <strong>${dataBr(a.ate)}</strong> (${a.dias} ${a.dias === 1 ? 'dia' : 'dias'}).</p>
+    <p>${teste ? 'Teste grátis' : 'Plano ativo'} · vale até <strong>${dataBr(a.ate)}</strong> (${a.dias} ${a.dias === 1 ? 'dia' : 'dias'}).</p>
     ${tabelaPreco()}${a.dias <= 7 ? comoPagar() : ''}</section>`;
 }
 
@@ -81,7 +81,7 @@ export function blocoAssinatura() {
 export function avisoAssinatura() {
   const a = acesso();
   if (a.estado !== 'ativo' || a.origem !== 'proprio' || a.dias > 7) return '';
-  return `<p class="alerta-atraso" role="status">⏳ Sua assinatura vence em ${a.dias} ${a.dias === 1 ? 'dia' : 'dias'} (${dataBr(a.ate)}). Veja como renovar em Perfil.</p>`;
+  return `<p class="alerta-atraso" role="status">⏳ Sua assinatura vence em ${a.dias} ${a.dias === 1 ? 'dia' : 'dias'} (${dataBr(a.ate)}). Veja como renovar em Minha conta (toque na sua inicial, no topo).</p>`;
 }
 
 // Aviso para o personal quando passou do limite da faixa que paga.

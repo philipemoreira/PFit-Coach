@@ -7,13 +7,15 @@ import { hoje } from './hoje.js';
 import { treinos } from './treinos.js';
 import { dieta } from './dieta.js';
 import { progresso } from './progresso.js';
-import { perfil } from './perfil.js';
+import { contaTela, configTela } from './perfil.js';
 import { personal, pararPersonal } from './personal.js';
 import { acoesRecados } from './recados.js';
 import { bloqueado } from './assinatura.js';
 import { abrirBoasVindas } from './ajuda.js';
+import { abrirOnboarding } from './onboarding.js';
 import { treinoAberto } from './treinar.js';
 import { aplicarTema } from './tema.js';
+import { escaparHtml } from './util.js';
 
 aplicarTema();
 const app = document.getElementById('app');
@@ -23,7 +25,6 @@ const ICONES = {
   treinos: '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>',
   dieta: '<path d="M12 7c-2-3-7-2-7 3 0 5 4 10 7 10s7-5 7-10c0-5-5-6-7-3zM12 7c0-2 1-3 3-4"/>',
   progresso: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
-  perfil: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
   alunos: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5M16 4.5a3.5 3.5 0 0 1 0 7M22 20c0-3-2-4.8-5-5.3"/>'
 };
 const ABAS = [
@@ -31,26 +32,35 @@ const ABAS = [
   { id: 'treinos', nome: 'Treinos', tela: treinos },
   { id: 'dieta', nome: 'Dieta', tela: dieta },
   { id: 'progresso', nome: 'Progresso', tela: progresso },
-  { id: 'alunos', nome: 'Alunos', tela: personal, soPersonal: true },
-  { id: 'perfil', nome: 'Perfil', tela: perfil }
+  { id: 'alunos', nome: 'Alunos', tela: personal, soPersonal: true }
 ];
+// Telas que não ficam no menu de baixo: abrem pela foto/inicial no topo.
+const EXTRAS = [
+  { id: 'conta', nome: 'Minha conta', tela: contaTela },
+  { id: 'config', nome: 'Configurações', tela: configTela }
+];
+const TELAS = [...ABAS, ...EXTRAS];
+const ehExtra = (id) => EXTRAS.some((e) => e.id === id);
 
 // Todas as ações e formulários das telas num lugar só.
 const ACOES = { ...acoesAuth, ...acoesRecados };
 const MUDANCAS = {};
-ABAS.forEach(({ tela }) => {
+TELAS.forEach(({ tela }) => {
   Object.assign(ACOES, tela.acoes || {});
   Object.assign(MUDANCAS, tela.mudancas || {});
 });
 ACOES.aba = (el) => nav.irPara(el.dataset.aba);
+ACOES.voltar = () => nav.voltar();
 ACOES['sair-direto'] = () => signOut(auth);
 
 const souPersonal = () => !!(estado.perfil && estado.perfil.papel === 'personal');
-const abasVisiveis = () => (bloqueado() ? ABAS.filter((a) => a.id === 'perfil') : ABAS.filter((a) => !a.soPersonal || souPersonal()));
+// Com a assinatura vencida só ficam Minha conta e Configurações (sem menu de baixo).
+const abasVisiveis = () => (bloqueado() ? [] : ABAS.filter((a) => !a.soPersonal || souPersonal()));
 let navAssinatura = '';
 
 let telaAtual = ''; // 'entrada' | 'carregando' | 'completar' | 'principal' | 'config'
 let abaAtual = 'hoje';
+let pilha = []; // de onde a pessoa veio (para o botão Voltar)
 let desenhoMarcado = false;
 let entrando = null;
 
@@ -69,12 +79,23 @@ function htmlNav() {
         ${abasVisiveis().map((a) => `<button type="button" class="nav-btn" data-acao="aba" data-aba="${a.id}" aria-label="${a.nome}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONES[a.id]}</svg><span>${a.nome}</span></button>`).join('')}`;
 }
 
+function htmlBarra() {
+  const nome = ((estado.perfil && estado.perfil.nome) || '').trim();
+  const inicial = (nome || '?').charAt(0).toUpperCase();
+  return `
+      <div class="topbar-marca" aria-hidden="true"><svg viewBox="0 0 512 512"><rect width="512" height="512" rx="110" fill="#181b22"/><g fill="#c6f432"><rect x="196" y="236" width="120" height="40" rx="8"/><rect x="150" y="176" width="46" height="160" rx="14"/><rect x="316" y="176" width="46" height="160" rx="14"/><rect x="108" y="206" width="34" height="100" rx="12"/><rect x="370" y="206" width="34" height="100" rx="12"/></g></svg><b>Treino</b></div>
+      <button type="button" class="conta-btn" data-acao="aba" data-aba="conta" aria-label="Minha conta">
+        <span class="conta-nome">${escaparHtml(nome.split(' ')[0])}</span><span class="avatar peq">${escaparHtml(inicial)}</span>
+      </button>`;
+}
+
 function montarPrincipal() {
   navAssinatura = abasVisiveis().map((a) => a.id).join(',');
   app.innerHTML = `
     <div class="shell">
+      <header id="topbar" class="topbar">${htmlBarra()}</header>
       <main id="conteudo" class="conteudo" tabindex="-1"></main>
-      <nav class="nav" aria-label="Menu principal">${htmlNav()}
+      <nav class="nav" aria-label="Menu principal" ${abasVisiveis().length ? '' : 'hidden'}>${htmlNav()}
       </nav>
     </div>`;
 }
@@ -83,7 +104,7 @@ let boasVistas = false;
 function boasVindasSeNovo() {
   if (boasVistas || !estado.perfil || estado.perfil.viuBoasVindas !== false) return;
   boasVistas = true;
-  setTimeout(() => abrirBoasVindas(true), 400);
+  setTimeout(() => (estado.perfil && estado.perfil.papel === 'personal' ? abrirBoasVindas(true) : abrirOnboarding()), 400);
 }
 
 function renderizar() {
@@ -96,10 +117,12 @@ function renderizar() {
   if (assin !== navAssinatura) {
     navAssinatura = assin;
     const menu = document.querySelector('.nav');
-    if (menu) menu.innerHTML = htmlNav();
+    if (menu) { menu.innerHTML = htmlNav(); menu.hidden = abasVisiveis().length === 0; }
   }
-  if (!abasVisiveis().some((a) => a.id === abaAtual)) abaAtual = abasVisiveis()[0].id;
-  const aba = ABAS.find((a) => a.id === abaAtual);
+  if (!ehExtra(abaAtual) && !abasVisiveis().some((a) => a.id === abaAtual)) abaAtual = abasVisiveis().length ? abasVisiveis()[0].id : 'conta';
+  const barra = document.getElementById("topbar");
+  if (barra) barra.innerHTML = htmlBarra();
+  const aba = TELAS.find((a) => a.id === abaAtual);
   const y = window.scrollY;
   conteudo.innerHTML = aba.tela.render();
   document.querySelectorAll('.nav-btn').forEach((b) => {
@@ -107,6 +130,8 @@ function renderizar() {
     b.classList.toggle('ativo', ativo);
     if (ativo) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
+  const cb = document.querySelector('.conta-btn');
+  if (cb) cb.classList.toggle('ativo', ehExtra(abaAtual));
   window.scrollTo(0, y);
 }
 
@@ -118,9 +143,18 @@ function agendarRender() {
 }
 
 nav.irPara = (id) => {
-  if (!abasVisiveis().some((a) => a.id === id)) return;
+  if (!ehExtra(id) && !abasVisiveis().some((a) => a.id === id)) return;
   const mudou = id !== abaAtual;
+  if (mudou) { if (ehExtra(id)) pilha.push(abaAtual); else pilha = []; }
   abaAtual = id;
+  if (mudou) animarEntrada();
+  renderizar();
+  if (mudou) window.scrollTo(0, 0);
+};
+nav.voltar = () => {
+  const alvo = pilha.pop() || (abasVisiveis().length ? abasVisiveis()[0].id : 'conta');
+  const mudou = alvo !== abaAtual;
+  abaAtual = alvo;
   if (mudou) animarEntrada();
   renderizar();
   if (mudou) window.scrollTo(0, 0);

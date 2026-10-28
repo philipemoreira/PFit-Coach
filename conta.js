@@ -16,15 +16,15 @@ export function abrirPrivacidade() {
     <div class="texto-legal">
       <p class="mudo peq">Resumo em linguagem simples. Este texto é um modelo e precisa ser revisado por um profissional antes de o app ser aberto ao público.</p>
       <h3>Quais dados o app guarda</h3>
-      <p>Nome, e-mail, treinos e dieta cadastrados, treinos feitos (cargas e repetições), peso, medidas, água, alimentos e calorias registrados, anotações, recados e, se você enviar, fotos de progresso.</p>
+      <p>Nome, e-mail, objetivo, data de nascimento, sexo, altura, peso, <strong>informações de saúde que você escolher informar</strong> (condições, lesões, medicamentos e restrições alimentares; são dados sensíveis e só são guardados com o seu consentimento), treinos e dieta cadastrados, treinos feitos (cargas e repetições), peso, medidas, água, alimentos e calorias registrados, anotações, recados e, se você enviar, fotos de progresso.</p>
       <h3>Para que usamos</h3>
       <p>Somente para o app funcionar para você: mostrar seu treino, dieta e progresso. Não vendemos seus dados e não há anúncios.</p>
       <h3>Quem vê seus dados</h3>
-      <p>Só você. Se você se conectar a um personal usando o código dele, ele passa a ver seus treinos feitos, dieta, peso, água, medidas, alimentos, calorias e recados, e a montar seu treino e sua dieta. As fotos só são vistas por ele se você ligar “Compartilhar com meu personal”. Você pode se desligar quando quiser, em Perfil.</p>
+      <p>Só você. Se você se conectar a um personal usando o código dele, ele passa a ver seus treinos feitos, dieta, peso, água, medidas, alimentos, calorias e recados, e a montar seu treino e sua dieta. As fotos só são vistas por ele se você ligar “Compartilhar com meu personal”. Você pode se desligar quando quiser, em Minha conta.</p>
       <h3>Onde ficam guardados</h3>
       <p>Em servidores do Google (Firebase), na região de São Paulo, Brasil.</p>
       <h3>Seus direitos</h3>
-      <p>Você pode salvar uma cópia dos seus dados (Perfil → Salvar backup), corrigir o que quiser dentro do app e <strong>excluir sua conta e todos os seus dados</strong> (Perfil → Conta → Excluir minha conta).</p>
+      <p>Você pode salvar uma cópia dos seus dados (Configurações → Salvar backup), corrigir o que quiser dentro do app e <strong>excluir sua conta e todos os seus dados</strong> (Configurações → Excluir minha conta).</p>
       <h3>Aviso de saúde</h3>
       <p>O app organiza treino e dieta, mas não substitui médico, nutricionista ou profissional de educação física. Em caso de dor, mal-estar ou dúvida, procure um profissional.</p>
       ${CONTATO ? `<h3>Contato</h3><p>${CONTATO}</p>` : ''}
@@ -42,7 +42,7 @@ export function abrirTermos() {
       <h3>Sua conta</h3>
       <p>Você é responsável por manter sua senha em segurança e por informar dados verdadeiros. Cada conta é pessoal.</p>
       <h3>Assinatura</h3>
-      <p>Toda conta tem um período grátis de 30 dias. Depois, o uso depende de assinatura ativa. Alunos conectados a um personal usam enquanto o plano do personal estiver em dia. Quando a assinatura vence, o acesso para alterar dados é pausado, mas seus dados continuam guardados e você pode salvar um backup ou excluir a conta.</p>
+      <p>Toda conta tem um período grátis de 15 dias. Depois, o uso depende de assinatura ativa. Alunos conectados a um personal usam enquanto o plano do personal estiver em dia. Quando a assinatura vence, o acesso para alterar dados é pausado, mas seus dados continuam guardados e você pode salvar um backup ou excluir a conta.</p>
       <h3>Uso adequado</h3>
       <p>Não use o app para fins ilegais, nem tente acessar dados de outras pessoas. Contas que violem isso podem ser bloqueadas.</p>
       <h3>Saúde</h3>
@@ -62,7 +62,7 @@ export function abrirExclusao() {
     <h2>Excluir minha conta</h2>
     <p>Isso apaga <strong>para sempre</strong> seus treinos, dieta, histórico, peso, medidas, fotos, recados e a própria conta. Não dá para desfazer.</p>
     ${personal ? `<p class="mudo">Você é personal de ${estado.alunos.length} aluno(s): eles serão desconectados de você. Os dados deles continuam com eles.</p>` : ''}
-    <p class="mudo peq">Quer guardar uma cópia? Feche e use Perfil → Salvar backup antes.</p>
+    <p class="mudo peq">Quer guardar uma cópia? Feche e use Configurações → Salvar backup antes.</p>
     <label class="campo">Para confirmar, digite EXCLUIR<input class="in" data-f="confirma" autocomplete="off" autocapitalize="characters"></label>
     <p class="erro" data-erro role="alert"></p>
     <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Cancelar</button><button class="btn perigo-claro" type="button" data-ed="excluir">Excluir tudo</button></div>`);

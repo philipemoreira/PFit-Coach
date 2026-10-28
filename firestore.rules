@@ -41,12 +41,12 @@ service cloud.firestore {
         || (logado() && temPersonal(request.auth.uid)
             && get(/databases/$(database)/documents/vinculos/$(request.auth.uid)).data.personalUid == uid);
       allow list: if false;
-      // Conta nova pode criar UM teste de até 31 dias. Depois disso, ninguém altera pelo app (só você, no console).
+      // Conta nova pode criar UM teste de até 16 dias. Depois disso, ninguém altera pelo app (só você, no console).
       allow create: if ehDono(uid)
         && request.resource.data.keys().hasOnly(['plano', 'ate', 'criadoEm'])
         && request.resource.data.plano == 'teste'
         && request.resource.data.ate > request.time
-        && request.resource.data.ate <= request.time + duration.value(31, 'd');
+        && request.resource.data.ate <= request.time + duration.value(16, 'd');
       allow update, delete: if false;
     }
 
@@ -138,7 +138,8 @@ service cloud.firestore {
 
     // ---------- Convites: o personal cria um código; o aluno consulta UM código por vez ----------
     match /convites/{codigo} {
-      allow get: if logado();
+      // Quem tem o código (8 letras e números, impossível de adivinhar) pode conferir o convite, mesmo antes de criar a conta.
+      allow get: if true;
       allow list: if false;
       allow create: if logado() && request.resource.data.personalUid == request.auth.uid;
       allow update: if logado() && resource.data.personalUid == request.auth.uid

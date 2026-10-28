@@ -83,7 +83,7 @@ export function iniciarDados(uid, email, aoMudar) {
     estado.metasConfig = snap.exists() ? { ...snap.data() } : null;
     aoMudar('metasConfig');
   }, (e) => console.error(e)));
-  // Minha assinatura. Conta nova ganha 1 mês grátis (as regras só deixam criar um teste de até 31 dias).
+  // Minha assinatura. Conta nova ganha 15 dias grátis (as regras só deixam criar um teste de até 16 dias).
   let criouTeste = false;
   paradores.push(onSnapshot(doc(db, 'assinaturas', uid), (snap) => {
     if (snap.exists()) {
@@ -94,7 +94,7 @@ export function iniciarDados(uid, email, aoMudar) {
       estado.assinatura = null;
       if (!criouTeste) {
         criouTeste = true;
-        setDoc(doc(db, 'assinaturas', uid), { plano: 'teste', ate: new Date(Date.now() + 30 * 86400000), criadoEm: new Date().toISOString() })
+        setDoc(doc(db, 'assinaturas', uid), { plano: 'teste', ate: new Date(Date.now() + 15 * 86400000), criadoEm: new Date().toISOString() })
           .catch((e) => { console.error(e); estado.assinatura = { plano: 'teste', ate: 0 }; aoMudar('assinatura'); });
       }
     }

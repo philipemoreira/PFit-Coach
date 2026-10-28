@@ -9,7 +9,8 @@ import { nav } from './nav.js';
 import { metaVolume, metaAgua, metaPeso, metaMacros, formatarVolume } from './metricas.js';
 import { abrirPrivacidade, abrirTermos, abrirExclusao } from './conta.js';
 import { abrirAjuda } from './ajuda.js';
-import { blocoAssinatura } from './assinatura.js';
+import { abrirOnboarding, resumoAnamnese } from './onboarding.js';
+import { blocoAssinatura, bloqueado } from './assinatura.js';
 
 const COLECOES = ['treinos', 'regras', 'sessoes', 'peso', 'checks', 'agua', 'medidas', 'alimentos', 'refeicoes'];
 
@@ -91,14 +92,26 @@ const secao = (titulo, sub, cards) => `
       <div class="grade-cards">${cards}</div>
     </section>`;
 
-export const perfil = {
+const SETA = '<svg class="linha-seta" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+// Linha de menu: título, explicação curta e seta. Serve para botões e para atalhos de tela.
+const linha = (acao, titulo, sub, extra = '', classe = '') => `
+      <button type="button" class="linha-menu ${classe}" data-acao="${acao}" ${extra}>
+        <span class="linha-txt"><b>${titulo}</b>${sub ? `<small>${sub}</small>` : ''}</span>${SETA}
+      </button>`;
+const topoSub = (titulo) => `
+    <header class="topo topo-sub">
+      ${bloqueado() && titulo === 'Minha conta' ? '' : '<button type="button" class="voltar" data-acao="voltar" aria-label="Voltar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>'}
+      <h1>${titulo}</h1>
+    </header>`;
+
+// Tela "Minha conta": quem sou eu, assinatura, personal e respostas iniciais.
+export const contaTela = {
   render() {
     const p = estado.perfil || {};
     const personal = p.papel === 'personal';
     const inicial = (p.nome || '?').trim().charAt(0).toUpperCase();
-    const m = metaMacros();
     return `
-    <header class="topo"><h1>Perfil</h1></header>
+    ${topoSub('Minha conta')}
     <section class="card perfil-topo">
       <div class="avatar" aria-hidden="true">${escaparHtml(inicial)}</div>
       <div>
@@ -110,74 +123,29 @@ export const perfil = {
     </section>
     ${blocoAssinatura()}
     ${secao(personal ? 'Personal e alunos' : 'Meu personal', personal ? 'Sua conta de personal e a conexão com seu próprio personal, se tiver.' : 'Conecte-se ao seu personal para ele montar seu treino e sua dieta.', cartaoPersonal(personal))}
-    ${secao('Metas e aparência', 'O que você quer alcançar e como o app aparece.', `
+    ${secao('Sobre você', 'Suas respostas iniciais. Ajudam o app e o seu personal.', `
     <section class="card">
-      <h2>Minhas metas</h2>
-      ${estado.vinculo ? '<p class="mudo peq">Definidas pelo seu personal.</p>' : ''}
-      <div class="lista-metas">
-        <div><span>Volume por dia</span><strong>${metaVolume() ? formatarVolume(metaVolume()) : 'sem meta'}</strong></div>
-        <div><span>Água por dia</span><strong>${metaAgua() ? (metaAgua() / 1000).toLocaleString('pt-BR') + ' L' : 'sem meta'}</strong></div>
-        <div><span>Peso desejado</span><strong>${metaPeso() ? metaPeso().toLocaleString('pt-BR') + ' kg' : 'sem meta'}</strong></div>
-        <div><span>Calorias por dia</span><strong>${m.kcal ? m.kcal.toLocaleString('pt-BR') + ' kcal' : 'sem meta'}</strong></div>
-        <div><span>Proteína · carbo · gordura</span><strong>${['prot', 'carb', 'gord'].map((k) => (m[k] ? m[k] + ' g' : '—')).join(' · ')}</strong></div>
-      </div>
-      ${estado.vinculo ? '' : '<div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="metas-editar">Mudar metas</button></div>'}
-    </section>
-    <section class="card">
-      <h2>Aparência</h2>
-      <p class="mudo peq">Automático acompanha o modo claro ou escuro do seu aparelho.</p>
-      <div class="acoes-card sem-auto">
-        <div class="seg tema" role="group" aria-label="Tema do app">
-          ${[['auto', 'Automático'], ['claro', 'Claro'], ['escuro', 'Escuro']].map(([id, nome]) => `<button type="button" aria-pressed="${temaSalvo() === id}" data-acao="tema" data-tema="${id}">${nome}</button>`).join('')}
-        </div>
-      </div>
+      <h2>Meus dados e saúde</h2>
+      ${resumoAnamnese(p.anamnese).length
+    ? `<div class="lista-metas">${resumoAnamnese(p.anamnese).map(([k, v]) => `<div><span>${escaparHtml(k)}</span><strong>${escaparHtml(v)}</strong></div>`).join('')}</div>`
+    : '<p class="mudo peq">Você ainda não respondeu. Leva 1 minuto e o app já sugere suas metas.</p>'}
+      <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="onboarding-refazer">${p.anamnese ? 'Atualizar respostas' : 'Responder agora'}</button></div>
     </section>`)}
-    ${secao('Seus dados', 'Guarde uma cópia ou apague tudo quando quiser.', `
-    <section class="card">
-      <h2>Backup</h2>
-      <p class="mudo peq">Um arquivo com seus treinos, dieta, histórico, peso, medidas e alimentos. Guarde onde quiser. (As fotos não entram no backup.)</p>
-      <input type="file" id="arq-backup" accept="application/json,.json" hidden data-mudar="backup-arquivo">
-      <div class="acoes-card">
-        <button class="btn secundario cheio" type="button" data-acao="backup-baixar">Salvar backup</button>
-        <button class="btn secundario cheio" type="button" data-acao="backup-restaurar">Restaurar backup</button>
+    <section class="secao">
+      <div class="linhas">
+        ${linha('aba', 'Configurações', 'Tema, metas, backup e privacidade', 'data-aba="config"')}
+        ${linha('ajuda', 'Ajuda', 'Como usar o app e falar com o suporte')}
       </div>
     </section>
-    <section class="card">
-      <h2>Privacidade e termos</h2>
-      <p class="mudo peq">Como seus dados são usados e as regras do app.</p>
-      <div class="acoes-card">
-        <button class="btn secundario cheio" type="button" data-acao="privacidade">Privacidade</button>
-        <button class="btn secundario cheio" type="button" data-acao="termos">Termos de uso</button>
-      </div>
-    </section>`)}
-    ${secao('Ajuda e conta', 'Tire dúvidas, saia ou exclua sua conta.', `
-    <section class="card">
-      <h2>Ajuda</h2>
-      <p class="mudo peq">Como usar cada parte do app, instalar no celular e falar com o suporte.</p>
-      <div class="acoes-card">
-        <button class="btn secundario cheio" type="button" data-acao="ajuda">Abrir a ajuda</button>
-      </div>
+    <section class="secao">
+      <button class="btn perigo-claro cheio" type="button" data-acao="sair">Sair da conta</button>
     </section>
-    <section class="card">
-      <h2>Conta</h2>
-      <p class="mudo peq">Sair deste aparelho ou apagar tudo para sempre.</p>
-      <div class="acoes-card">
-        <button class="btn perigo-claro cheio" type="button" data-acao="sair">Sair da conta</button>
-        <button class="link perigo-txt" type="button" data-acao="conta-excluir">Excluir minha conta</button>
-      </div>
-    </section>`)}
     <p class="aviso-rodape">Treino · versão 1</p>`;
-  },
-  mudancas: {
-    'backup-arquivo': (el) => {
-      const arq = el.files && el.files[0];
-      el.value = '';
-      if (arq) restaurarBackup(arq);
-    }
   },
   acoes: {
     privacidade: () => abrirPrivacidade(),
     termos: () => abrirTermos(),
+    'onboarding-refazer': () => abrirOnboarding({ refazer: true }),
     ajuda: () => abrirAjuda(),
     'conta-excluir': () => abrirExclusao(),
     'personal-ativar': async () => {
@@ -286,3 +254,63 @@ export const perfil = {
     }
   }
 };
+
+// Tela "Configurações": aparência, metas, dados e privacidade, ajuda.
+export const configTela = {
+  render() {
+    const m = metaMacros();
+    return `
+    ${topoSub('Configurações')}
+    ${secao('Aparência', 'Escolha como o app aparece. A mudança é na hora.', `
+    <section class="card">
+      <div class="seg tema" role="group" aria-label="Tema do app">
+        ${[['auto', 'Automático'], ['claro', 'Claro'], ['escuro', 'Escuro']].map(([id, nome]) => `<button type="button" aria-pressed="${temaSalvo() === id}" data-acao="tema" data-tema="${id}">${nome}</button>`).join('')}
+      </div>
+      <p class="mudo peq dica-tema">Automático acompanha o modo claro ou escuro do seu aparelho.</p>
+    </section>`)}
+    ${secao('Metas', 'O que você quer alcançar a cada dia.', `
+    <section class="card">
+      ${estado.vinculo ? '<p class="mudo peq">Definidas pelo seu personal.</p>' : ''}
+      <div class="lista-metas">
+        <div><span>Volume por dia</span><strong>${metaVolume() ? formatarVolume(metaVolume()) : 'sem meta'}</strong></div>
+        <div><span>Água por dia</span><strong>${metaAgua() ? (metaAgua() / 1000).toLocaleString('pt-BR') + ' L' : 'sem meta'}</strong></div>
+        <div><span>Peso desejado</span><strong>${metaPeso() ? metaPeso().toLocaleString('pt-BR') + ' kg' : 'sem meta'}</strong></div>
+        <div><span>Calorias por dia</span><strong>${m.kcal ? m.kcal.toLocaleString('pt-BR') + ' kcal' : 'sem meta'}</strong></div>
+        <div><span>Proteína · carbo · gordura</span><strong>${['prot', 'carb', 'gord'].map((k) => (m[k] ? m[k] + ' g' : '—')).join(' · ')}</strong></div>
+      </div>
+      ${estado.vinculo ? '' : '<div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="metas-editar">Mudar metas</button></div>'}
+    </section>`)}
+    <section class="secao">
+      <div class="secao-cab"><h2>Dados e privacidade</h2><p>Guarde uma cópia, leia as regras ou apague tudo. As fotos não entram no backup.</p></div>
+      <input type="file" id="arq-backup" accept="application/json,.json" hidden data-mudar="backup-arquivo">
+      <div class="linhas">
+        ${linha('backup-baixar', 'Salvar backup', 'Treinos, dieta, histórico, peso e medidas')}
+        ${linha('backup-restaurar', 'Restaurar backup', 'Volta os dados de um arquivo salvo')}
+        ${linha('privacidade', 'Privacidade', 'Como seus dados são usados')}
+        ${linha('termos', 'Termos de uso', 'As regras do app')}
+      </div>
+    </section>
+    <section class="secao">
+      <div class="secao-cab"><h2>Ajuda</h2></div>
+      <div class="linhas">
+        ${linha('ajuda', 'Como usar o app', 'Passo a passo, instalar no celular e suporte')}
+      </div>
+    </section>
+    <section class="secao">
+      <div class="secao-cab"><h2>Zona de cuidado</h2></div>
+      <div class="linhas">
+        ${linha('conta-excluir', 'Excluir minha conta', 'Apaga a conta e todos os dados para sempre', '', 'perigo')}
+      </div>
+    </section>
+    <p class="aviso-rodape">Treino · versão 1</p>`;
+  },
+  mudancas: {
+    'backup-arquivo': (el) => {
+      const arq = el.files && el.files[0];
+      el.value = '';
+      if (arq) restaurarBackup(arq);
+    }
+  },
+  acoes: {}
+};
+

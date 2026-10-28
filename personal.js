@@ -13,6 +13,7 @@ import { volumeSessao, formatarVolume } from './metricas.js';
 import { nav } from './nav.js';
 import { totais } from './alimentos.js';
 import { avisoFaixa } from './assinatura.js';
+import { resumoAnamnese } from './onboarding.js';
 import { abrirFotos } from './fotos.js';
 
 const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem letras que se confundem (0/O, 1/I)
@@ -26,7 +27,7 @@ const paradoresLista = {};
 let uidSync = null;
 
 function vazio() {
-  return { treinos: [], regras: [], sessoes: [], peso: [], checks: [], medidas: [], recados: [], refeicoes: [], metas: null };
+  return { treinos: [], regras: [], sessoes: [], peso: [], checks: [], medidas: [], recados: [], refeicoes: [], metas: null, perfilAluno: null };
 }
 
 export function pararPersonal() {
@@ -75,6 +76,10 @@ function abrirDetalhe(uid) {
   ouvir('medidas', 'medidas', [orderBy('data', 'desc'), limit(30)]);
   ouvir('refeicoes', 'refeicoes', [orderBy('data', 'desc'), limit(14)]);
   ouvir('recados', 'recados', [orderBy('criadoEm', 'desc'), limit(40)]);
+  paradoresAluno.push(onSnapshot(doc(db, 'usuarios', uid), (snap) => {
+    dados.perfilAluno = snap.exists() ? { ...snap.data() } : null;
+    nav.renderizar();
+  }, (e) => console.error(e)));
   paradoresAluno.push(onSnapshot(doc(db, 'usuarios', uid, 'config', 'metas'), (snap) => {
     dados.metas = snap.exists() ? { ...snap.data() } : null;
     nav.renderizar();
@@ -146,7 +151,7 @@ function cartaoConvite() {
     return `
     <section class="card destaque">
       <h2>Convide seus alunos</h2>
-      <p class="mudo">Gere um código e passe para o aluno. Ele digita no Perfil dele, em “Tenho um código de personal”. Só quem tem o código consegue se conectar.</p>
+      <p class="mudo">Gere um código e passe para o aluno. Ele digita em Minha conta, em “Tenho um código de personal”. Só quem tem o código consegue se conectar.</p>
       <div class="acoes-card"><button class="btn cheio" type="button" data-acao="p-convite-gerar">Gerar meu código</button></div>
     </section>`;
   }
@@ -154,7 +159,7 @@ function cartaoConvite() {
   <section class="card destaque">
     <h2>Seu código de convite</h2>
     <p class="codigo" aria-label="Código de convite">${escaparHtml(codigo)}</p>
-    <p class="mudo peq">Passe para o aluno digitar no Perfil dele. Quem já está conectado continua conectado se você trocar o código.</p>
+    <p class="mudo peq">Passe para o aluno digitar em Minha conta. Quem já está conectado continua conectado se você trocar o código.</p>
     <div class="acoes-card linha">
       <button class="btn" type="button" data-acao="p-convite-copiar">Copiar</button>
       <button class="btn secundario" type="button" data-acao="p-convite-novo">Trocar código</button>
@@ -273,6 +278,10 @@ function detalhe(v) {
       Calorias por dia: <strong>${typeof m.metaKcal === 'number' ? m.metaKcal.toLocaleString('pt-BR') + ' kcal' : 'sem meta'}</strong><br>
       Proteína · carbo · gordura: <strong>${['metaProt', 'metaCarb', 'metaGord'].map((k) => (typeof m[k] === 'number' ? m[k] + ' g' : '—')).join(' · ')}</strong></p>
       <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="p-aluno-metas">Definir metas</button></div>
+    </section>
+    <section class="card">
+      <h2>Sobre o aluno</h2>
+      ${(() => { const l = resumoAnamnese(dados.perfilAluno && dados.perfilAluno.anamnese); return l.length ? `<div class="lista-metas">${l.map(([k, v]) => `<div><span>${escaparHtml(k)}</span><strong>${escaparHtml(v)}</strong></div>`).join('')}</div>` : '<p class="mudo peq">Ele ainda não respondeu o questionário inicial.</p>'; })()}
     </section>
     <section class="card">
       <h2>Alimentação</h2>
