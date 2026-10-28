@@ -1,5 +1,5 @@
 // Guarda na memória tudo o que o app mostra e mantém atualizado em tempo real.
-import { db, onSnapshot, collection, doc, query, orderBy, limit, where } from './firebase.js';
+import { db, onSnapshot, collection, doc, setDoc, query, orderBy, limit, where } from './firebase.js';
 
 export const estado = {
   uid: null,
@@ -20,10 +20,14 @@ export const estado = {
   alunos: [],         // (para personal) vínculos dos meus alunos
   modelos: [],        // (para personal) modelos de treino
   alimentos: [],      // meus alimentos (biblioteca)
-  refeicoes: []       // o que comi, por dia
+  refeicoes: [],      // o que comi, por dia
+  assinatura: undefined,         // minha assinatura (undefined = carregando | null = não existe)
+  assinaturaPersonal: undefined  // assinatura do meu personal (se eu tiver um)
 };
 
 let paradores = [];
+let paradorPersonal = null;
+let personalOuvido = null;
 
 export function iniciarDados(uid, email, aoMudar) {
   pararDados();
@@ -72,11 +76,29 @@ export function iniciarDados(uid, email, aoMudar) {
   // Meu vínculo com um personal (o documento tem o meu próprio código de usuário como nome).
   paradores.push(onSnapshot(doc(db, 'vinculos', uid), (snap) => {
     estado.vinculo = snap.exists() ? { ...snap.data() } : null;
+    ouvirAssinaturaDoPersonal(estado.vinculo ? estado.vinculo.personalUid : null, aoMudar);
     aoMudar('vinculo');
   }, (e) => console.error(e)));
   paradores.push(onSnapshot(doc(db, 'usuarios', uid, 'config', 'metas'), (snap) => {
     estado.metasConfig = snap.exists() ? { ...snap.data() } : null;
     aoMudar('metasConfig');
+  }, (e) => console.error(e)));
+  // Minha assinatura. Conta nova ganha 1 mês grátis (as regras só deixam criar um teste de até 31 dias).
+  let criouTeste = false;
+  paradores.push(onSnapshot(doc(db, 'assinaturas', uid), (snap) => {
+    if (snap.exists()) {
+      estado.assinatura = { ...snap.data() };
+    } else if (snap.metadata && snap.metadata.fromCache) {
+      return;
+    } else {
+      estado.assinatura = null;
+      if (!criouTeste) {
+        criouTeste = true;
+        setDoc(doc(db, 'assinaturas', uid), { plano: 'teste', ate: new Date(Date.now() + 30 * 86400000), criadoEm: new Date().toISOString() })
+          .catch((e) => { console.error(e); estado.assinatura = { plano: 'teste', ate: 0 }; aoMudar('assinatura'); });
+      }
+    }
+    aoMudar('assinatura');
   }, (e) => console.error(e)));
   // Meus alunos (só aparece algo se eu for personal de alguém).
   paradores.push(onSnapshot(query(collection(db, 'vinculos'), where('personalUid', '==', uid)), (snap) => {
@@ -85,7 +107,22 @@ export function iniciarDados(uid, email, aoMudar) {
   }, (e) => console.error(e)));
 }
 
+function ouvirAssinaturaDoPersonal(personalUid, aoMudar) {
+  if (personalUid === personalOuvido) return;
+  if (paradorPersonal) { paradorPersonal(); paradorPersonal = null; }
+  personalOuvido = personalUid;
+  estado.assinaturaPersonal = undefined;
+  if (!personalUid) return;
+  paradorPersonal = onSnapshot(doc(db, 'assinaturas', personalUid), (snap) => {
+    if (!snap.exists() && snap.metadata && snap.metadata.fromCache) return;
+    estado.assinaturaPersonal = snap.exists() ? { ...snap.data() } : null;
+    aoMudar('assinaturaPersonal');
+  }, (e) => { console.error(e); estado.assinaturaPersonal = null; aoMudar('assinaturaPersonal'); });
+}
+
 export function pararDados() {
+  if (paradorPersonal) { paradorPersonal(); paradorPersonal = null; }
+  personalOuvido = null;
   paradores.forEach((p) => p());
   paradores = [];
   estado.uid = null;
@@ -106,4 +143,6 @@ export function pararDados() {
   estado.modelos = [];
   estado.alimentos = [];
   estado.refeicoes = [];
+  estado.assinatura = undefined;
+  estado.assinaturaPersonal = undefined;
 }

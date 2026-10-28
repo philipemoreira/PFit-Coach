@@ -8,6 +8,7 @@ import { regrasDoDia } from './dieta.js';
 import { nav } from './nav.js';
 import { blocoRecadosHoje } from './recados.js';
 import { blocoMacros } from './alimentos.js';
+import { avisoAssinatura } from './assinatura.js';
 import { volumeDoDia, metaVolume, metaAgua, aguaDoDia, sequenciaSemanas, formatarVolume } from './metricas.js';
 
 const LETRAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']; // segunda a domingo
@@ -177,6 +178,7 @@ export const hoje = {
       <p class="mudo">${formatarDataLonga()}</p>
       <h1>Olá${nome ? ', ' + escaparHtml(nome) : ''}</h1>
     </header>
+    ${avisoAssinatura()}
     ${blocoRascunho()}
     ${faixaSemana()}
     <section class="bento">

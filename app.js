@@ -10,6 +10,7 @@ import { progresso } from './progresso.js';
 import { perfil } from './perfil.js';
 import { personal, pararPersonal } from './personal.js';
 import { acoesRecados } from './recados.js';
+import { bloqueado } from './assinatura.js';
 import { treinoAberto } from './treinar.js';
 import { aplicarTema } from './tema.js';
 
@@ -44,7 +45,7 @@ ACOES.aba = (el) => nav.irPara(el.dataset.aba);
 ACOES['sair-direto'] = () => signOut(auth);
 
 const souPersonal = () => !!(estado.perfil && estado.perfil.papel === 'personal');
-const abasVisiveis = () => ABAS.filter((a) => !a.soPersonal || souPersonal());
+const abasVisiveis = () => (bloqueado() ? ABAS.filter((a) => a.id === 'perfil') : ABAS.filter((a) => !a.soPersonal || souPersonal()));
 let navAssinatura = '';
 
 let telaAtual = ''; // 'entrada' | 'carregando' | 'completar' | 'principal' | 'config'
@@ -88,7 +89,7 @@ function renderizar() {
     const menu = document.querySelector('.nav');
     if (menu) menu.innerHTML = htmlNav();
   }
-  if (!abasVisiveis().some((a) => a.id === abaAtual)) abaAtual = 'hoje';
+  if (!abasVisiveis().some((a) => a.id === abaAtual)) abaAtual = abasVisiveis()[0].id;
   const aba = ABAS.find((a) => a.id === abaAtual);
   const y = window.scrollY;
   conteudo.innerHTML = aba.tela.render();

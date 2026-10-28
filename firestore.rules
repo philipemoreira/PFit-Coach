@@ -19,6 +19,37 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/vinculos/$(alunoUid)).data.personalUid == request.auth.uid;
     }
 
+    // ---------- Assinatura ----------
+    // Está em dia quando o documento assinaturas/{uid} existe e o campo "ate" (data) ainda não passou.
+    function assinaturaValida(uid) {
+      return exists(/databases/$(database)/documents/assinaturas/$(uid))
+        && get(/databases/$(database)/documents/assinaturas/$(uid)).data.ate > request.time;
+    }
+    // Aluno de personal usa de graça enquanto o personal dele estiver em dia. Os demais precisam da própria assinatura.
+    function temAcesso(uid) {
+      return temPersonal(uid)
+        ? assinaturaValida(get(/databases/$(database)/documents/vinculos/$(uid)).data.personalUid)
+        : assinaturaValida(uid);
+    }
+    function personalEmDia() {
+      return assinaturaValida(request.auth.uid);
+    }
+
+    match /assinaturas/{uid} {
+      // Quem lê: o dono, e o aluno lê a do personal dele (para saber se está pausado).
+      allow get: if ehDono(uid)
+        || (logado() && temPersonal(request.auth.uid)
+            && get(/databases/$(database)/documents/vinculos/$(request.auth.uid)).data.personalUid == uid);
+      allow list: if false;
+      // Conta nova pode criar UM teste de até 31 dias. Depois disso, ninguém altera pelo app (só você, no console).
+      allow create: if ehDono(uid)
+        && request.resource.data.keys().hasOnly(['plano', 'ate', 'criadoEm'])
+        && request.resource.data.plano == 'teste'
+        && request.resource.data.ate > request.time
+        && request.resource.data.ate <= request.time + duration.value(31, 'd');
+      allow update, delete: if false;
+    }
+
     // ---------- Dados de cada pessoa ----------
     match /usuarios/{userId} {
       // O perfil: só o dono escreve. O personal do aluno pode ler.
@@ -28,67 +59,80 @@ service cloud.firestore {
       // Treino e dieta: quem monta é o personal. O dono só edita se NÃO tiver personal.
       match /treinos/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);
-        allow write: if (ehDono(userId) && !temPersonal(userId)) || ehPersonalDe(userId);
+        allow create, update: if (ehDono(userId) && !temPersonal(userId) && temAcesso(userId)) || (ehPersonalDe(userId) && personalEmDia());
+        allow delete: if (ehDono(userId) && !temPersonal(userId)) || ehPersonalDe(userId);
       }
       match /regras/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);
-        allow write: if (ehDono(userId) && !temPersonal(userId)) || ehPersonalDe(userId);
+        allow create, update: if (ehDono(userId) && !temPersonal(userId) && temAcesso(userId)) || (ehPersonalDe(userId) && personalEmDia());
+        allow delete: if (ehDono(userId) && !temPersonal(userId)) || ehPersonalDe(userId);
       }
 
       // Metas definidas pelo personal para o aluno.
       match /config/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);
-        allow write: if ehPersonalDe(userId);
+        allow create, update: if ehPersonalDe(userId) && personalEmDia();
+        allow delete: if ehDono(userId) || ehPersonalDe(userId);
       }
 
       // Recados entre aluno e personal.
       match /recados/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);
-        allow create, update, delete: if ehDono(userId) || ehPersonalDe(userId);
+        allow create, update: if (ehDono(userId) && temAcesso(userId)) || (ehPersonalDe(userId) && personalEmDia());
+        allow delete: if ehDono(userId) || ehPersonalDe(userId);
       }
 
       // Treinos feitos, dieta marcada, peso, água e medidas: o dono escreve; o personal só lê.
       match /sessoes/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);
-        allow write: if ehDono(userId);
+        allow create, update: if ehDono(userId) && temAcesso(userId);
+        allow delete: if ehDono(userId);
       }
       match /checks/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);
-        allow write: if ehDono(userId);
+        allow create, update: if ehDono(userId) && temAcesso(userId);
+        allow delete: if ehDono(userId);
       }
       match /peso/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);
-        allow write: if ehDono(userId);
+        allow create, update: if ehDono(userId) && temAcesso(userId);
+        allow delete: if ehDono(userId);
       }
       match /agua/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);
-        allow write: if ehDono(userId);
+        allow create, update: if ehDono(userId) && temAcesso(userId);
+        allow delete: if ehDono(userId);
       }
       match /medidas/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);
-        allow write: if ehDono(userId);
+        allow create, update: if ehDono(userId) && temAcesso(userId);
+        allow delete: if ehDono(userId);
       }
 
       // Alimentos e registro de refeições: o dono escreve; o personal do aluno lê.
       match /alimentos/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);
-        allow write: if ehDono(userId);
+        allow create, update: if ehDono(userId) && temAcesso(userId);
+        allow delete: if ehDono(userId);
       }
       match /refeicoes/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);
-        allow write: if ehDono(userId);
+        allow create, update: if ehDono(userId) && temAcesso(userId);
+        allow delete: if ehDono(userId);
       }
       // Fotos: o personal só lê se o aluno marcou "compartilhar".
       match /fotos/{id} {
         allow read: if ehDono(userId)
           || (ehPersonalDe(userId)
               && get(/databases/$(database)/documents/usuarios/$(userId)).data.get('compartilhaFotos', false) == true);
-        allow write: if ehDono(userId);
+        allow create, update: if ehDono(userId) && temAcesso(userId);
+        allow delete: if ehDono(userId);
       }
 
       // Modelos de treino do personal: só dele.
       match /modelos/{id} {
-        allow read, write: if ehDono(userId);
+        allow read, delete: if ehDono(userId);
+        allow create, update: if ehDono(userId) && temAcesso(userId);
       }
     }
 

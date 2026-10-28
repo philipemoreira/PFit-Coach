@@ -12,6 +12,7 @@ import { abrirRecados } from './recados.js';
 import { volumeSessao, formatarVolume } from './metricas.js';
 import { nav } from './nav.js';
 import { totais } from './alimentos.js';
+import { avisoFaixa } from './assinatura.js';
 import { abrirFotos } from './fotos.js';
 
 const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem letras que se confundem (0/O, 1/I)
@@ -194,6 +195,7 @@ function listaAlunos() {
   const sumidos = estado.alunos.filter((v) => { const s = situacao(v); return !s.carregando && s.sumido; });
   return `
   <header class="topo"><h1>Alunos</h1></header>
+  ${avisoFaixa()}
   ${cartaoConvite()}
   ${sumidos.length ? `<p class="alerta-atraso" role="status">⚠️ ${sumidos.length} ${sumidos.length === 1 ? 'aluno está' : 'alunos estão'} há ${DIAS_SUMIDO} dias ou mais sem treinar: ${escaparHtml(sumidos.map((v) => v.alunoNome || 'Aluno').join(', '))}.</p>` : ''}
   ${estado.alunos.length

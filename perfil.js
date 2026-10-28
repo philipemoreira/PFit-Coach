@@ -8,6 +8,7 @@ import { temaSalvo, definirTema } from './tema.js';
 import { nav } from './nav.js';
 import { metaVolume, metaAgua, metaPeso, metaMacros, formatarVolume } from './metricas.js';
 import { abrirPrivacidade, abrirExclusao } from './conta.js';
+import { blocoAssinatura } from './assinatura.js';
 
 const COLECOES = ['treinos', 'regras', 'sessoes', 'peso', 'checks', 'agua', 'medidas', 'alimentos', 'refeicoes'];
 
@@ -90,6 +91,7 @@ export const perfil = {
     const inicial = (p.nome || '?').trim().charAt(0).toUpperCase();
     return `
     <header class="topo"><h1>Perfil</h1></header>
+    ${blocoAssinatura()}
     <section class="card perfil-topo">
       <div class="avatar" aria-hidden="true">${escaparHtml(inicial)}</div>
       <div>
