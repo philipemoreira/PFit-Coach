@@ -6,7 +6,10 @@ import {
 } from './util.js';
 import { salvarDoc, removerDoc } from './dados.js';
 import { nav } from './nav.js';
-import { volumeSessao, volumeDoDia, metaVolume, sequenciaSemanas, formatarVolume } from './metricas.js';
+import { grupoDoExercicio } from './exercicios-base.js';
+import { totaisDoDia } from './alimentos.js';
+import { abrirFotos } from './fotos.js';
+import { volumeSessao, volumeDoDia, metaVolume, metaPeso, sequenciaSemanas, formatarVolume, conquistas, metaMacros } from './metricas.js';
 
 let exercicioEscolhido = '';
 let mesVisto = null; // primeiro dia do mês mostrado no calendário
@@ -57,7 +60,7 @@ function pontosExercicio(chave) {
     .sort((a, b) => String(a.data).localeCompare(String(b.data)) || String(a.fim || '').localeCompare(String(b.fim || '')))
     .map((s) => {
       const ex = (s.exercicios || []).find((e) => norm(e.nome) === chave);
-      const cargas = ex ? (ex.series || []).filter((x) => x.feito && x.carga != null).map((x) => x.carga) : [];
+      const cargas = ex ? (ex.series || []).filter((x) => x.feito && x.tipo !== 'aq' && x.carga != null).map((x) => x.carga) : [];
       return cargas.length ? { rot: formatarDataCurta(s.data), v: Math.max(...cargas) } : null;
     })
     .filter(Boolean)
@@ -137,6 +140,65 @@ function blocoVolume() {
   </section>`;
 }
 
+function blocoCalorias() {
+  const meta = metaMacros().kcal;
+  const dias = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const str = dataLocal(d);
+    dias.push({ str, v: Math.round(totaisDoDia(str).kcal) });
+  }
+  const max = Math.max(1, meta || 0, ...dias.map((d) => d.v));
+  const W = 320; const H = 150; const base = H - 18;
+  const larg = (W - 10) / 7;
+  const barras = dias.map((d, i) => {
+    const h = Math.round(((base - 6) * d.v) / max);
+    const x = 5 + i * larg;
+    return `<rect x="${(x + 4).toFixed(1)}" y="${base - h}" width="${(larg - 8).toFixed(1)}" height="${Math.max(h, d.v ? 2 : 0)}" rx="3" class="g-barra"/>`
+      + `<text x="${(x + larg / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle" class="g-rot">${formatarDataCurta(d.str)}</text>`;
+  }).join('');
+  const yMeta = base - Math.round(((base - 6) * (meta || 0)) / max);
+  const comDado = dias.filter((d) => d.v > 0);
+  const media = comDado.length ? Math.round(comDado.reduce((n, d) => n + d.v, 0) / comDado.length) : 0;
+  return `
+  <section class="card">
+    <h2>Calorias</h2>
+    <p class="grande">${media.toLocaleString('pt-BR')} <small>kcal por dia (média)</small></p>
+    ${comDado.length
+    ? `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Calorias dos últimos 7 dias">${meta ? `<line x1="0" x2="${W}" y1="${yMeta}" y2="${yMeta}" class="g-tracejado"/>` : ''}${barras}</svg>`
+    : '<p class="mudo vazio-grafico">Anote o que você comeu na aba Hoje e o gráfico aparece aqui.</p>'}
+    <p class="mudo peq">Últimos 7 dias.${meta ? ` Linha tracejada = meta de ${meta.toLocaleString('pt-BR')} kcal.` : ' Defina uma meta no Perfil para ver a linha.'}</p>
+  </section>`;
+}
+
+function blocoGrupos() {
+  const semana = dataLocal(segundaDaSemana());
+  const cont = {};
+  estado.sessoes.filter((x) => x.data >= semana).forEach((s) => (s.exercicios || []).forEach((e) => {
+    if (e.cardio) return;
+    const n = (e.series || []).filter((x) => x.feito && x.tipo !== 'aq').length;
+    if (n) { const g = grupoDoExercicio(e.nome); cont[g] = (cont[g] || 0) + n; }
+  }));
+  const lista = Object.entries(cont).sort((a, b) => b[1] - a[1]);
+  const max = Math.max(1, ...lista.map((x) => x[1]));
+  return `
+  <section class="card">
+    <h2>Séries por músculo na semana</h2>
+    ${lista.length
+    ? lista.map(([g, n]) => `<div class="linha-barra"><span>${escaparHtml(g)}</span><div class="barra peq"><i style="width:${Math.round((n / max) * 100)}%"></i></div><strong>${n}</strong></div>`).join('')
+    : '<p class="mudo vazio-grafico">Termine um treino nesta semana e as séries por músculo aparecem aqui (aquecimento não conta).</p>'}
+  </section>`;
+}
+
+function blocoFotos() {
+  return `
+  <section class="card">
+    <div class="card-topo"><h2>Fotos do corpo</h2><button class="btn pequeno" type="button" data-acao="fotos-abrir">Abrir</button></div>
+    <p class="mudo peq">Guarde fotos para comparar antes e depois. Só você vê, a não ser que escolha compartilhar com seu personal.</p>
+  </section>`;
+}
+
 function blocoCalendario() {
   const hoje = new Date();
   if (!mesVisto) mesVisto = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -184,10 +246,46 @@ function blocoPeso() {
   <section class="card">
     <div class="card-topo"><h2>Peso corporal</h2><button class="btn pequeno" type="button" data-acao="peso-novo">+ Registrar</button></div>
     ${ultimo ? `<p class="grande">${formatarNumero(ultimo.kg)} <small>kg</small></p>
-      ${dif !== null ? `<p class="mudo peq">${dif > 0 ? '+' : ''}${formatarNumero(dif)} kg desde o primeiro registro</p>` : ''}`
+      ${dif !== null ? `<p class="mudo peq">${dif > 0 ? '+' : ''}${formatarNumero(dif)} kg desde o primeiro registro</p>` : ''}
+      ${metaPeso() ? `<p class="mudo peq">Meta: <strong>${formatarNumero(metaPeso())} kg</strong> · ${Math.abs(ultimo.kg - metaPeso()) < 0.05 ? 'meta atingida 🎉' : `faltam ${formatarNumero(Math.abs(ultimo.kg - metaPeso()))} kg`}</p>` : ''}`
       : '<p class="mudo vazio-grafico">Nenhum peso registrado ainda.<br>Toque em “+ Registrar” para começar.</p>'}
     ${grafico(asc.slice(-30).map((p) => ({ rot: formatarDataCurta(p.data), v: p.kg })), 'kg') || (asc.length === 1 ? '<p class="mudo peq">Registre de novo outro dia para ver o gráfico.</p>' : '')}
     ${lista ? `<div class="lista-peso">${lista}</div>` : ''}
+  </section>`;
+}
+
+const CAMPOS_MEDIDAS = [['peito', 'Peito'], ['cintura', 'Cintura'], ['quadril', 'Quadril'], ['braco', 'Braço'], ['coxa', 'Coxa'], ['panturrilha', 'Panturrilha']];
+
+function blocoMedidas() {
+  const asc = [...estado.medidas].sort((a, b) => String(a.data).localeCompare(String(b.data)));
+  const ultimaData = asc.length ? asc[asc.length - 1].data : null;
+  const linhas = CAMPOS_MEDIDAS.map(([k, nome]) => {
+    const com = asc.filter((m) => typeof m[k] === 'number');
+    if (!com.length) return '';
+    const atual = com[com.length - 1];
+    const ant = com.length > 1 ? com[com.length - 2] : null;
+    const dif = ant ? atual[k] - ant[k] : null;
+    return `<div class="linha-medida"><span>${nome}</span><strong>${formatarNumero(atual[k])} cm</strong><small class="mudo">${dif === null ? '' : `${dif > 0 ? '+' : ''}${formatarNumero(dif)}`}</small></div>`;
+  }).join('');
+  return `
+  <section class="card">
+    <div class="card-topo"><h2>Medidas do corpo</h2><button class="btn pequeno" type="button" data-acao="medidas-novo">+ Registrar</button></div>
+    ${linhas ? `<div class="lista-medidas">${linhas}</div>
+      <p class="mudo peq">Último registro: ${formatarDataCurta(ultimaData)}. O número pequeno é a diferença para o registro anterior.</p>
+      <div class="acoes-card"><button class="link" type="button" data-acao="medidas-historico">Ver registros</button></div>`
+      : '<p class="mudo vazio-grafico">Peito, cintura, quadril, braço, coxa e panturrilha.<br>Toque em “+ Registrar” para começar.</p>'}
+  </section>`;
+}
+
+function blocoConquistas() {
+  const lista = conquistas();
+  const feitas = lista.filter((c) => c.ok).length;
+  return `
+  <section class="card">
+    <div class="card-topo"><h2>Conquistas</h2><span class="selo">${feitas} de ${lista.length}</span></div>
+    <div class="conquistas">
+      ${lista.map((c) => `<button type="button" class="conquista ${c.ok ? 'ok' : ''}" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}" data-d="${escaparHtml(c.desc)}" data-ok="${c.ok ? '1' : '0'}" aria-label="${escaparHtml(c.nome)}: ${c.ok ? 'conquistada' : 'bloqueada'}"><span aria-hidden="true">${c.icone}</span><small>${escaparHtml(c.nome)}</small></button>`).join('')}
+    </div>
   </section>`;
 }
 
@@ -224,9 +322,10 @@ function blocoHistorico() {
     <div class="lista">
       ${lista.map((s) => {
         const feitas = (s.exercicios || []).reduce((n, e) => n + (e.series || []).filter((x) => x.feito).length, 0);
+        const cardioMin = (s.exercicios || []).reduce((n, e) => n + (e.cardio && e.feito && e.minutos ? e.minutos : 0), 0);
         return `<button type="button" class="regra-linha" data-acao="sessao-ver" data-id="${escaparHtml(s.id)}">
           <small class="hora">${formatarDataCurta(s.data)}</small>
-          <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${feitas} ${feitas === 1 ? 'série' : 'séries'}${s.duracaoMin ? ` · ${s.duracaoMin} min` : ''} · ${Math.round(volumeSessao(s)).toLocaleString('pt-BR')} kg${(s.recordes || []).length ? ' · 🏆' : ''}</small></span>
+          <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${feitas || !cardioMin ? `${feitas} ${feitas === 1 ? 'série' : 'séries'}` : ''}${cardioMin ? `${feitas ? ' · ' : ''}cardio ${formatarNumero(cardioMin)} min` : ''}${s.duracaoMin ? ` · ${s.duracaoMin} min` : ''} ${volumeSessao(s) > 0 || !cardioMin ? ` · ${Math.round(volumeSessao(s)).toLocaleString('pt-BR')} kg` : ''}${(s.recordes || []).length ? ' · 🏆' : ''}</small></span>
           <span class="seta" aria-hidden="true">›</span></button>`;
       }).join('')}
     </div>
@@ -237,7 +336,7 @@ export const progresso = {
   render() {
     return `
     <header class="topo"><h1>Progresso</h1></header>
-    ${blocoResumo()}<div class="grade-cards">${blocoCalendario()}${blocoVolume()}${blocoPeso()}${blocoExercicio()}</div>${blocoHistorico()}`;
+    ${blocoResumo()}<div class="grade-cards">${blocoCalendario()}${blocoVolume()}${blocoGrupos()}${blocoCalorias()}${blocoPeso()}${blocoMedidas()}${blocoFotos()}${blocoExercicio()}${blocoConquistas()}</div>${blocoHistorico()}`;
   },
   mudancas: {
     'prog-exercicio': (el) => {
@@ -246,6 +345,57 @@ export const progresso = {
     }
   },
   acoes: {
+    'fotos-abrir': () => abrirFotos({ uid: estado.uid, dono: true }),
+    'conquista-ver': (el) => {
+      const ok = el.dataset.ok === '1';
+      abrirFolha(`<h2>${escaparHtml(el.dataset.n)}</h2><p>${ok ? '✅ Conquistada!' : '🔒 Ainda não.'}</p><p class="mudo">${escaparHtml(el.dataset.d)}</p><button class="btn cheio" type="button" data-fechar>Fechar</button>`);
+    },
+    'medidas-novo': () => {
+      const ultimo = [...estado.medidas].sort((a, b) => String(b.data).localeCompare(String(a.data)))[0] || {};
+      const f = abrirFolha(`
+        <h2>Registrar medidas</h2>
+        <label class="campo">Data<input class="in" type="date" data-f="data" value="${dataLocal()}" max="${dataLocal()}"></label>
+        <p class="mudo peq">Em centímetros. Preencha só as que você mediu.</p>
+        <div class="grade-medidas">
+          ${CAMPOS_MEDIDAS.map(([k, nome]) => `<label class="campo">${nome} (cm)<input class="in" inputmode="decimal" data-m="${k}" placeholder="${typeof ultimo[k] === 'number' ? formatarNumero(ultimo[k]) : ''}"></label>`).join('')}
+        </div>
+        <p class="erro" data-erro role="alert"></p>
+        <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Cancelar</button><button class="btn" type="button" data-ed="salvar">Salvar</button></div>`, { classe: 'folha-alta' });
+      f.el.addEventListener('click', (e) => {
+        if (!e.target.closest('[data-ed="salvar"]')) return;
+        const data = f.el.querySelector('[data-f="data"]').value;
+        const erro = f.el.querySelector('[data-erro]');
+        if (!data) { erro.textContent = 'Escolha a data.'; return; }
+        const dados = { data, criadoEm: new Date().toISOString() };
+        let algum = false;
+        for (const [k, nome] of CAMPOS_MEDIDAS) {
+          const t = f.el.querySelector(`[data-m="${k}"]`).value.trim();
+          if (!t) continue;
+          const n = numero(t);
+          if (n === null || n < 5 || n > 300) { erro.textContent = `Valor inválido em ${nome}.`; return; }
+          dados[k] = n; algum = true;
+        }
+        if (!algum) { erro.textContent = 'Preencha pelo menos uma medida.'; return; }
+        // Um registro por dia; se já existe, junta com o que já estava salvo naquele dia.
+        salvarDoc(estado.uid, 'medidas', data, dados, { merge: true });
+        f.fechar();
+        toast('Medidas registradas.');
+      });
+    },
+    'medidas-historico': () => {
+      const lista = [...estado.medidas].sort((a, b) => String(b.data).localeCompare(String(a.data)));
+      abrirFolha(`<h2>Registros de medidas</h2>
+        <div class="lista">${lista.map((m) => `<div class="linha-peso"><span>${formatarDataCurta(m.data)}</span><small class="mudo">${CAMPOS_MEDIDAS.filter(([k]) => typeof m[k] === 'number').map(([k, n]) => `${n} ${formatarNumero(m[k])}`).join(' · ')}</small>
+          <button type="button" class="icone-peq" data-acao="medidas-excluir" data-id="${escaparHtml(m.id)}" aria-label="Apagar registro de ${formatarDataCurta(m.data)}">✕</button></div>`).join('')}</div>
+        <button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`);
+    },
+    'medidas-excluir': async (el) => {
+      if (await confirmar('Apagar esse registro de medidas?', { ok: 'Apagar', perigo: true })) {
+        removerDoc(estado.uid, 'medidas', el.dataset.id);
+        document.querySelectorAll('.folha-fundo').forEach((x) => x.remove());
+        document.body.classList.remove('sem-rolagem');
+      }
+    },
     'cal-mes': (el) => {
       mesVisto = new Date(mesVisto.getFullYear(), mesVisto.getMonth() + Number(el.dataset.passo), 1);
       nav.renderizar();
@@ -282,9 +432,11 @@ export const progresso = {
       const s = estado.sessoes.find((x) => x.id === el.dataset.id);
       if (!s) return;
       const blocos = (s.exercicios || []).map((e) => {
+        if (e.cardio) return `<div class="det-ex"><strong>${escaparHtml(e.nome)}</strong> <span class="selo">cardio</span><p class="mudo peq">${e.feito ? `${formatarNumero(e.minutos)} min` : 'Não marcado como feito'}</p></div>`;
         const feitas = (e.series || []).filter((x) => x.feito);
+        const rot = { aq: ' (aquecimento)', dr: ' (drop)', fa: ' (falha)' };
         return `<div class="det-ex"><strong>${escaparHtml(e.nome)}</strong>
-          <p class="mudo peq">${feitas.length ? feitas.map((x) => `${x.carga != null ? formatarNumero(x.carga) + ' kg' : '—'} × ${x.reps != null ? formatarNumero(x.reps) : '—'}`).join(' · ') : 'Nenhuma série marcada'}</p></div>`;
+          <p class="mudo peq">${feitas.length ? feitas.map((x) => `${x.carga != null ? formatarNumero(x.carga) + ' kg' : '—'} × ${x.reps != null ? formatarNumero(x.reps) : '—'}${rot[x.tipo] || ''}`).join(' · ') : 'Nenhuma série marcada'}</p></div>`;
       }).join('');
       const f = abrirFolha(`
         <h2>${escaparHtml(s.treinoNome)}</h2>

@@ -4,6 +4,7 @@ import { abrirFolha, confirmar } from './folha.js';
 import { escaparHtml, novoId, eFimDeSemana } from './util.js';
 import { salvarDoc, removerDoc } from './dados.js';
 import { nav } from './nav.js';
+import { blocoAlimentos, acoesAlimentos } from './alimentos.js';
 
 const GRUPOS = [
   { id: 'sempre', titulo: 'Todos os dias', sub: '' },
@@ -29,6 +30,9 @@ export function regrasDoDia(d = new Date()) {
 }
 
 function linhaRegra(r) {
+  if (estado.vinculo) {
+    return `<div class="regra-linha fixa">${r.horario ? `<small class="hora">${escaparHtml(r.horario)}</small>` : ''}<span>${escaparHtml(r.texto)}</span></div>`;
+  }
   return `<button type="button" class="regra-linha" data-acao="regra-editar" data-id="${escaparHtml(r.id)}">
     ${r.horario ? `<small class="hora">${escaparHtml(r.horario)}</small>` : ''}
     <span>${escaparHtml(r.texto)}</span>
@@ -46,11 +50,11 @@ function blocoGrupo(g) {
       ${hoje ? '<span class="selo">vale hoje</span>' : ''}
     </div>
     ${regras.length ? `<div class="lista">${regras.map(linhaRegra).join('')}</div>` : '<p class="mudo vazio-peq">Nenhuma regra ainda.</p>'}
-    <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="regra-nova" data-grupo="${g.id}">+ Adicionar regra</button></div>
+    ${estado.vinculo ? '' : `<div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="regra-nova" data-grupo="${g.id}">+ Adicionar regra</button></div>`}
   </section>`;
 }
 
-function abrirEditor(grupoInicial, regra) {
+export function abrirEditorRegra(grupoInicial, regra, uidAlvo = estado.uid) {
   const grupo = regra ? regra.grupo : grupoInicial || 'sempre';
   const folha = abrirFolha(`
     <h2>${regra ? 'Editar regra' : 'Nova regra'}</h2>
@@ -89,11 +93,11 @@ function abrirEditor(grupoInicial, regra) {
         ordem: regra ? regra.ordem : Date.now(),
         criadoEm: regra ? regra.criadoEm : new Date().toISOString()
       };
-      salvarDoc(estado.uid, 'regras', regra ? regra.id : novoId(), dados);
+      salvarDoc(uidAlvo, 'regras', regra ? regra.id : novoId(), dados);
       folha.fechar();
     } else if (b.dataset.ed === 'excluir') {
       if (await confirmar('Excluir essa regra?', { ok: 'Excluir', perigo: true })) {
-        removerDoc(estado.uid, 'regras', regra.id);
+        removerDoc(uidAlvo, 'regras', regra.id);
         folha.fechar();
       }
     }
@@ -104,18 +108,20 @@ export const dieta = {
   render() {
     return `
     <header class="topo"><h1>Dieta</h1></header>
-    <p class="mudo peq margem-b">Suas regras de alimentação. Na aba Hoje você marca o que cumpriu no dia.</p>
+    ${estado.vinculo ? `<p class="faixa-personal">Sua dieta é montada por <strong>${escaparHtml(estado.vinculo.personalNome || 'seu personal')}</strong>. Na aba Hoje você marca o que cumpriu.</p>` : '<p class="mudo peq margem-b">Suas regras de alimentação. Na aba Hoje você marca o que cumpriu no dia.</p>'}
     <div class="grade-cards tres">${GRUPOS.map(blocoGrupo).join('')}</div>
+    ${blocoAlimentos()}
     <p class="aviso-rodape">Este app organiza a sua dieta, mas não substitui nutricionista nem médico.</p>`;
   },
   acoes: {
+    ...acoesAlimentos,
     'regra-nova': (el) => {
       nav.irPara('dieta');
-      abrirEditor(el.dataset.grupo);
+      abrirEditorRegra(el.dataset.grupo);
     },
     'regra-editar': (el) => {
       const r = estado.regras.find((x) => x.id === el.dataset.id);
-      if (r) abrirEditor(r.grupo, r);
+      if (r) abrirEditorRegra(r.grupo, r);
     }
   }
 };

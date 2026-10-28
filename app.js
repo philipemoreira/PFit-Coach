@@ -8,6 +8,8 @@ import { treinos } from './treinos.js';
 import { dieta } from './dieta.js';
 import { progresso } from './progresso.js';
 import { perfil } from './perfil.js';
+import { personal, pararPersonal } from './personal.js';
+import { acoesRecados } from './recados.js';
 import { treinoAberto } from './treinar.js';
 import { aplicarTema } from './tema.js';
 
@@ -19,18 +21,20 @@ const ICONES = {
   treinos: '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>',
   dieta: '<path d="M12 7c-2-3-7-2-7 3 0 5 4 10 7 10s7-5 7-10c0-5-5-6-7-3zM12 7c0-2 1-3 3-4"/>',
   progresso: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
-  perfil: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'
+  perfil: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+  alunos: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5M16 4.5a3.5 3.5 0 0 1 0 7M22 20c0-3-2-4.8-5-5.3"/>'
 };
 const ABAS = [
   { id: 'hoje', nome: 'Hoje', tela: hoje },
   { id: 'treinos', nome: 'Treinos', tela: treinos },
   { id: 'dieta', nome: 'Dieta', tela: dieta },
   { id: 'progresso', nome: 'Progresso', tela: progresso },
+  { id: 'alunos', nome: 'Alunos', tela: personal, soPersonal: true },
   { id: 'perfil', nome: 'Perfil', tela: perfil }
 ];
 
 // Todas as ações e formulários das telas num lugar só.
-const ACOES = { ...acoesAuth };
+const ACOES = { ...acoesAuth, ...acoesRecados };
 const MUDANCAS = {};
 ABAS.forEach(({ tela }) => {
   Object.assign(ACOES, tela.acoes || {});
@@ -38,6 +42,10 @@ ABAS.forEach(({ tela }) => {
 });
 ACOES.aba = (el) => nav.irPara(el.dataset.aba);
 ACOES['sair-direto'] = () => signOut(auth);
+
+const souPersonal = () => !!(estado.perfil && estado.perfil.papel === 'personal');
+const abasVisiveis = () => ABAS.filter((a) => !a.soPersonal || souPersonal());
+let navAssinatura = '';
 
 let telaAtual = ''; // 'entrada' | 'carregando' | 'completar' | 'principal' | 'config'
 let abaAtual = 'hoje';
@@ -53,13 +61,18 @@ function animarEntrada() {
   entrando = setTimeout(() => c.classList.remove('entrando'), 800);
 }
 
+function htmlNav() {
+  return `
+        <div class="nav-marca" aria-hidden="true"><svg viewBox="0 0 512 512"><rect width="512" height="512" rx="110" fill="#181b22"/><g fill="#c6f432"><rect x="196" y="236" width="120" height="40" rx="8"/><rect x="150" y="176" width="46" height="160" rx="14"/><rect x="316" y="176" width="46" height="160" rx="14"/><rect x="108" y="206" width="34" height="100" rx="12"/><rect x="370" y="206" width="34" height="100" rx="12"/></g></svg><b>Treino</b></div>
+        ${abasVisiveis().map((a) => `<button type="button" class="nav-btn" data-acao="aba" data-aba="${a.id}" aria-label="${a.nome}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONES[a.id]}</svg><span>${a.nome}</span></button>`).join('')}`;
+}
+
 function montarPrincipal() {
+  navAssinatura = abasVisiveis().map((a) => a.id).join(',');
   app.innerHTML = `
     <div class="shell">
       <main id="conteudo" class="conteudo" tabindex="-1"></main>
-      <nav class="nav" aria-label="Menu principal">
-        <div class="nav-marca" aria-hidden="true"><svg viewBox="0 0 512 512"><rect width="512" height="512" rx="110" fill="#181b22"/><g fill="#c6f432"><rect x="196" y="236" width="120" height="40" rx="8"/><rect x="150" y="176" width="46" height="160" rx="14"/><rect x="316" y="176" width="46" height="160" rx="14"/><rect x="108" y="206" width="34" height="100" rx="12"/><rect x="370" y="206" width="34" height="100" rx="12"/></g></svg><b>Treino</b></div>
-        ${ABAS.map((a) => `<button type="button" class="nav-btn" data-acao="aba" data-aba="${a.id}" aria-label="${a.nome}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONES[a.id]}</svg><span>${a.nome}</span></button>`).join('')}
+      <nav class="nav" aria-label="Menu principal">${htmlNav()}
       </nav>
     </div>`;
 }
@@ -68,6 +81,14 @@ function renderizar() {
   if (telaAtual !== 'principal') return;
   const conteudo = document.getElementById('conteudo');
   if (!conteudo) return;
+  // Se a lista de abas mudou (ex.: a pessoa virou personal), refaz o menu.
+  const assin = abasVisiveis().map((a) => a.id).join(',');
+  if (assin !== navAssinatura) {
+    navAssinatura = assin;
+    const menu = document.querySelector('.nav');
+    if (menu) menu.innerHTML = htmlNav();
+  }
+  if (!abasVisiveis().some((a) => a.id === abaAtual)) abaAtual = 'hoje';
   const aba = ABAS.find((a) => a.id === abaAtual);
   const y = window.scrollY;
   conteudo.innerHTML = aba.tela.render();
@@ -87,7 +108,7 @@ function agendarRender() {
 }
 
 nav.irPara = (id) => {
-  if (!ABAS.some((a) => a.id === id)) return;
+  if (!abasVisiveis().some((a) => a.id === id)) return;
   const mudou = id !== abaAtual;
   abaAtual = id;
   if (mudou) animarEntrada();
@@ -168,6 +189,7 @@ if (!configurado) {
       iniciarDados(usuario.uid, usuario.email, aoMudarDados);
       estado.nomeSugerido = usuario.displayName || '';
     } else {
+      pararPersonal();
       pararDados();
     }
     escolherTela();

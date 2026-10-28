@@ -604,3 +604,82 @@ select.in { appearance: none; -webkit-appearance: none; background-image: linear
   .grade-cards.tres { grid-template-columns: repeat(3, 1fr); }
   .grade-cards.tres .card:last-child:nth-child(odd) { grid-column: auto; }
 }
+
+/* ---- Etapa A2 ---- */
+.alerta-atraso { background: var(--perigo-bg); color: var(--perigo); border-radius: 14px; padding: 10px 12px; font-size: 14px; font-weight: 600; margin: 0 0 10px; }
+.regra-item.atrasada .hora { color: var(--perigo); }
+.regra-item.atrasada .caixa { border-color: var(--perigo); }
+.topo-acoes { display: flex; gap: 8px; align-items: center; }
+.lista-medidas { display: grid; gap: 2px; margin: 4px 0 8px; }
+.linha-medida { display: grid; grid-template-columns: 1fr auto 48px; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--borda); }
+.linha-medida span { color: var(--mudo); }
+.linha-medida small { text-align: right; font-variant-numeric: tabular-nums; }
+.grade-medidas { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.conquistas { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 10px; }
+.conquista { display: grid; justify-items: center; align-content: start; gap: 6px; padding: 12px 6px; border-radius: 16px; border: 1px solid var(--borda); background: var(--card2); color: var(--mudo); font-family: inherit; min-height: 92px; }
+.conquista span { font-size: 28px; filter: grayscale(1); opacity: .45; }
+.conquista small { font-size: 11px; font-weight: 700; line-height: 1.2; text-align: center; }
+.conquista.ok { border-color: var(--destaque); color: var(--texto); background: var(--selo-bg); }
+.conquista.ok span { filter: none; opacity: 1; }
+.cardio-opcao { display: flex; align-items: center; gap: 10px; margin: 6px 0 10px; font-size: 14px; font-weight: 600; color: var(--mudo); }
+.cardio-opcao input { width: 20px; height: 20px; accent-color: var(--limao); }
+.ex-bloco .so-cardio { display: none; margin-bottom: 10px; }
+.ex-bloco.cardio .so-cardio { display: block; }
+.ex-bloco.cardio .grade4 { display: none; }
+.dica-tipos { font-size: 12px; color: var(--mudo); margin: 8px 0 10px; }
+.dica-tipos b { color: var(--destaque); }
+.serie .num { background: none; border: 0; padding: 0; height: 38px; border-radius: 12px; cursor: pointer; font-family: var(--fonte-titulo); }
+.serie .num.tipo-aq { background: rgba(255, 190, 60, .18); color: #ffbe3c; }
+.serie .num.tipo-dr { background: rgba(120, 160, 255, .18); color: #8aa8ff; }
+.serie .num.tipo-fa { background: var(--perigo-bg); color: var(--perigo); }
+.serie.cardio-linha { grid-template-columns: 1fr auto 58px; }
+.grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.anilhas-res { min-height: 90px; margin: 4px 0 12px; }
+.anilhas-lista { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.anilha { background: var(--selo-bg); color: var(--texto); border: 1px solid var(--destaque); border-radius: 999px; padding: 8px 14px; font-weight: 700; }
+.anilha b { color: var(--destaque); }
+
+/* ---- Etapa B: personal e aluno ---- */
+.faixa-personal { background: var(--selo-bg); border: 1px solid var(--destaque); border-radius: 16px; padding: 12px 14px; font-size: 14px; margin: 0 0 14px; }
+.regra-linha.fixa { cursor: default; }
+.codigo { font-family: var(--fonte-titulo); font-size: 40px; font-weight: 800; letter-spacing: 6px; color: var(--destaque); margin: 6px 0 8px; word-break: break-all; }
+.codigo-in { text-transform: uppercase; letter-spacing: 4px; font-weight: 800; text-align: center; font-size: 20px; }
+.selo.alerta { background: var(--perigo-bg); color: var(--perigo); }
+.aluno-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.aluno-id h2 { margin: 0; }
+.avatar.peq { width: 44px; height: 44px; font-size: 18px; border-radius: 14px; flex: none; }
+.linha-treino-aluno { display: flex; align-items: center; gap: 4px; }
+.linha-treino-aluno .regra-linha { flex: 1; }
+.grupo-regras { margin-bottom: 8px; }
+.grupo-regras h3 { font-size: 14px; color: var(--mudo); margin: 0; }
+.recados { display: grid; gap: 8px; max-height: 40vh; overflow-y: auto; margin: 8px 0 12px; padding-right: 4px; }
+#recados-lista { overflow-y: auto; max-height: 40vh; }
+.recado { background: var(--card2); border: 1px solid var(--borda); border-radius: 16px 16px 16px 4px; padding: 10px 12px; max-width: 88%; }
+.recado.meu { justify-self: end; background: var(--selo-bg); border-color: var(--destaque); border-radius: 16px 16px 4px 16px; }
+.recado p { margin: 0 0 4px; white-space: pre-wrap; word-break: break-word; }
+.recado small { color: var(--mudo); font-size: 11px; }
+.recado-previa { margin: 0 0 4px; white-space: pre-wrap; word-break: break-word; }
+@media (min-width: 900px) { .grade-cards .card.larga { grid-column: 1 / -1; } }
+.grupo-regras .card-topo { align-items: center; margin-bottom: 4px; }
+
+/* ---- Etapa C ---- */
+.grade-cards > .card:only-child { grid-column: 1 / -1; }
+.barra.peq { height: 8px; }
+.linha-barra { display: grid; grid-template-columns: 96px 1fr 28px; gap: 10px; align-items: center; padding: 6px 0; }
+.linha-barra .barra { margin: 0; }
+.linha-barra strong { text-align: right; }
+.minimacros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+.minimacro { background: var(--fundo-2, rgba(127,127,127,.1)); border-radius: 12px; padding: 8px; text-align: center; }
+.minimacro strong { display: block; }
+.minimacro span { font-size: .78rem; opacity: .75; }
+.grade3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.grade-fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 10px 0; }
+.grade-fotos .foto { padding: 0; border: 0; border-radius: 12px; overflow: hidden; aspect-ratio: 3/4; background: rgba(127,127,127,.15); cursor: pointer; }
+.grade-fotos .foto img, .foto-grande img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.foto-grande img { height: auto; max-height: 60vh; object-fit: contain; border-radius: 12px; }
+.comparar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.comparar img { width: 100%; border-radius: 12px; display: block; }
+.texto-legal { font-size: .92rem; line-height: 1.5; }
+.texto-legal h3, h3.sub { margin: 14px 0 4px; font-size: 1rem; }
+.perigo-txt { color: #d64545; }
+.acoes-card.linha2 { flex-wrap: wrap; }

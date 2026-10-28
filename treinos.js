@@ -4,13 +4,17 @@ import { abrirFolha, confirmar, fecharTodasFolhas } from './folha.js';
 import { escaparHtml, novoId, numero, DIAS_CURTOS, ORDEM_DIAS, toast } from './util.js';
 import { salvarDoc, removerDoc } from './dados.js';
 import { iniciarTreino } from './treinar.js';
+import { abrirAnilhas } from './anilhas.js';
 import { nav } from './nav.js';
+import { todosOsNomes } from './exercicios-base.js';
 
 function chipsDias(dias = []) {
   if (!dias.length) return '';
   const ord = ORDEM_DIAS.filter((d) => dias.includes(d));
   return `<div class="chips">${ord.map((d) => `<span class="chip">${DIAS_CURTOS[d]}</span>`).join('')}</div>`;
 }
+
+const comPersonal = () => !!estado.vinculo;
 
 function cardTreino(t) {
   const exs = t.exercicios || [];
@@ -25,8 +29,8 @@ function cardTreino(t) {
     </div>
     ${chipsDias(t.dias)}
     ${previa ? `<p class="previa">${previa}${exs.length > 3 ? ' …' : ''}</p>` : ''}
-    <div class="linha-botoes">
-      <button class="btn secundario" type="button" data-acao="treino-editar" data-id="${escaparHtml(t.id)}">Editar</button>
+ <div class="linha-botoes">
+      ${comPersonal() ? '' : `<button class="btn secundario" type="button" data-acao="treino-editar" data-id="${escaparHtml(t.id)}">Editar</button>`}
       <button class="btn" type="button" data-acao="treino-iniciar" data-id="${escaparHtml(t.id)}">Iniciar</button>
     </div>
   </section>`;
@@ -35,7 +39,7 @@ function cardTreino(t) {
 function blocoExercicio(ex = {}) {
   const v = (x) => (x === null || x === undefined ? '' : escaparHtml(x));
   return `
-  <div class="ex-bloco" data-ex data-id="${escaparHtml(ex.id || novoId())}">
+  <div class="ex-bloco ${ex.cardio ? 'cardio' : ''}" data-ex data-id="${escaparHtml(ex.id || novoId())}">
     <div class="ex-topo">
       <input class="in" data-f="nome" placeholder="Nome do exercício" list="lista-exercicios" value="${v(ex.nome)}" maxlength="80">
       <div class="ex-mover">
@@ -44,6 +48,8 @@ function blocoExercicio(ex = {}) {
         <button type="button" data-mv="del" aria-label="Remover exercício">✕</button>
       </div>
     </div>
+    <label class="cardio-opcao"><input type="checkbox" data-f="cardio" ${ex.cardio ? 'checked' : ''}> Cardio (por tempo, sem séries)</label>
+    <div class="so-cardio"><label>Minutos<input class="in" data-f="minutos" inputmode="numeric" value="${v(ex.minutos)}"></label></div>
     <div class="grade4">
       <label>Séries<input class="in" data-f="series" inputmode="numeric" value="${v(ex.series)}"></label>
       <label>Repetições<input class="in" data-f="reps" placeholder="10 ou 8-12" value="${v(ex.reps)}" maxlength="12"></label>
@@ -58,6 +64,7 @@ function nomesJaUsados() {
   const nomes = new Set();
   estado.treinos.forEach((t) => (t.exercicios || []).forEach((e) => e.nome && nomes.add(e.nome)));
   estado.sessoes.forEach((s) => (s.exercicios || []).forEach((e) => e.nome && nomes.add(e.nome)));
+  todosOsNomes().forEach((n) => nomes.add(n));
   return [...nomes];
 }
 
@@ -65,22 +72,31 @@ function coletar(el) {
   const ler = (bloco, n) => bloco.querySelector(`[data-f="${n}"]`).value.trim();
   const nome = el.querySelector('[data-f="nome-treino"]').value.trim();
   const dias = [...el.querySelectorAll('.dia-chip[aria-pressed="true"]')].map((b) => Number(b.dataset.dia));
-  const exercicios = [...el.querySelectorAll('[data-ex]')].map((b) => ({
-    id: b.dataset.id,
-    nome: ler(b, 'nome'),
-    series: parseInt(ler(b, 'series'), 10),
-    reps: ler(b, 'reps') || null,
-    carga: numero(ler(b, 'carga')),
-    descanso: parseInt(ler(b, 'descanso'), 10) || null,
-    obs: ler(b, 'obs') || null
-  })).filter((e) => e.nome);
+  const exercicios = [...el.querySelectorAll('[data-ex]')].map((b) => {
+    if (b.querySelector('[data-f="cardio"]').checked) {
+      return { id: b.dataset.id, nome: ler(b, 'nome'), cardio: true, minutos: parseInt(ler(b, 'minutos'), 10) || null, series: 1, obs: ler(b, 'obs') || null };
+    }
+    return {
+      id: b.dataset.id,
+      nome: ler(b, 'nome'),
+      series: parseInt(ler(b, 'series'), 10),
+      reps: ler(b, 'reps') || null,
+      carga: numero(ler(b, 'carga')),
+      descanso: parseInt(ler(b, 'descanso'), 10) || null,
+      obs: ler(b, 'obs') || null
+    };
+  }).filter((e) => e.nome);
   return { nome, dias, exercicios };
 }
 
-export function abrirEditorTreino(treino) {
+// opcoes.uid: de quem é o treino (o personal edita o treino do aluno); opcoes.colecao: 'treinos' ou 'modelos'.
+export function abrirEditorTreino(treino, opcoes = {}) {
+  const uidAlvo = opcoes.uid || estado.uid;
+  const colecao = opcoes.colecao || 'treinos';
+  const rotulo = colecao === 'modelos' ? 'modelo' : 'treino';
   const exs = treino && (treino.exercicios || []).length ? treino.exercicios : [{}];
   const folha = abrirFolha(`
-    <h2>${treino ? 'Editar treino' : 'Novo treino'}</h2>
+    <h2>${treino ? `Editar ${rotulo}` : `Novo ${rotulo}`}</h2>
     <label class="campo">Nome do treino
       <input class="in" data-f="nome-treino" maxlength="60" placeholder="Ex.: Treino A" value="${treino ? escaparHtml(treino.nome) : ''}">
     </label>
@@ -107,6 +123,7 @@ export function abrirEditorTreino(treino) {
     const dia = e.target.closest('.dia-chip');
     if (dia) { dia.setAttribute('aria-pressed', dia.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); return; }
 
+    if (e.target.matches('[data-f="cardio"]')) { e.target.closest('[data-ex]').classList.toggle('cardio', e.target.checked); return; }
     const mv = e.target.closest('[data-mv]');
     if (mv) {
       const bloco = mv.closest('[data-ex]');
@@ -126,19 +143,21 @@ export function abrirEditorTreino(treino) {
       const d = coletar(el);
       if (!d.nome) return erro('Dê um nome para o treino.');
       if (!d.exercicios.length) return erro('Adicione pelo menos um exercício.');
-      const semSeries = d.exercicios.find((x) => !(x.series >= 1));
+      const semMin = d.exercicios.find((x) => x.cardio && !(x.minutos >= 1));
+      if (semMin) return erro(`Informe os minutos do cardio "${semMin.nome}".`);
+      const semSeries = d.exercicios.find((x) => !x.cardio && !(x.series >= 1));
       if (semSeries) return erro(`Informe quantas séries tem em "${semSeries.nome}".`);
-      salvarDoc(estado.uid, 'treinos', treino ? treino.id : novoId(), {
+      salvarDoc(uidAlvo, colecao, treino ? treino.id : novoId(), {
         ...d,
         ordem: treino ? treino.ordem : Date.now(),
         criadoEm: treino ? treino.criadoEm : new Date().toISOString(),
         atualizadoEm: new Date().toISOString()
       });
       folha.fechar();
-      toast('Treino salvo.');
+      toast(colecao === 'modelos' ? 'Modelo salvo.' : 'Treino salvo.');
     } else if (b.dataset.ed === 'excluir') {
       if (await confirmar(`Excluir o treino "${treino.nome}"? Seu histórico de treinos feitos não é apagado.`, { ok: 'Excluir', perigo: true })) {
-        removerDoc(estado.uid, 'treinos', treino.id);
+        removerDoc(uidAlvo, colecao, treino.id);
         folha.fechar();
       }
     }
@@ -148,15 +167,18 @@ export function abrirEditorTreino(treino) {
 export const treinos = {
   render() {
     const lista = estado.treinos.map(cardTreino).join('');
+    const nomePersonal = estado.vinculo ? escaparHtml(estado.vinculo.personalNome || 'seu personal') : '';
     return `
-    <header class="topo"><h1>Treinos</h1><button class="btn pequeno" type="button" data-acao="treino-novo">+ Novo</button></header>
-    ${lista ? `<div class="grade-cards">${lista}</div>` : `<div class="vazio">
+    <header class="topo"><h1>Treinos</h1><div class="topo-acoes"><button class="btn pequeno secundario" type="button" data-acao="anilhas-abrir">Anilhas</button>${comPersonal() ? '' : '<button class="btn pequeno" type="button" data-acao="treino-novo">+ Novo</button>'}</div></header>
+    ${comPersonal() ? `<p class="faixa-personal">Seus treinos são montados por <strong>${nomePersonal}</strong>. Aqui você só treina e anota.</p>` : ''}
+    ${lista ? `<div class="grade-cards">${lista}</div>` : comPersonal() ? `<div class="vazio"><p><strong>Seu personal ainda não montou seu treino.</strong></p><p class="mudo">Assim que ele montar, aparece aqui.</p></div>` : `<div class="vazio">
       <p><strong>Você ainda não tem treinos.</strong></p>
       <p class="mudo">Crie o primeiro, por exemplo o Treino A, com os exercícios, séries e repetições.</p>
       <button class="btn" type="button" data-acao="treino-novo">Criar meu primeiro treino</button>
     </div>`}`;
   },
   acoes: {
+    'anilhas-abrir': () => abrirAnilhas(null),
     'treino-novo': () => {
       nav.irPara('treinos');
       abrirEditorTreino();

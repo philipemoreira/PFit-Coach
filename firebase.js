@@ -2,12 +2,12 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-  createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup
+  createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, deleteUser
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, limit,
-  getDocs, writeBatch
+  getDocs, getDoc, writeBatch, where
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
 
@@ -26,6 +26,6 @@ if (configurado) {
 
 export {
   auth, db, onAuthStateChanged, signInWithEmailAndPassword,
-  createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup,
-  collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, limit, getDocs, writeBatch
+  createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, deleteUser,
+  collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, limit, getDocs, getDoc, writeBatch, where
 };

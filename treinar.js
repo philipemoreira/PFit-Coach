@@ -5,6 +5,7 @@ import { escaparHtml, dataLocal, novoId, numero, formatarNumero, formatarDataCur
 import { salvarDoc } from './dados.js';
 import { abrirFolha } from './folha.js';
 import { volumeDasSeries, maiorCargaAntes, formatarVolume } from './metricas.js';
+import { abrirAnilhas } from './anilhas.js';
 import { nav } from './nav.js';
 
 let S = null; // treino em andamento
@@ -34,8 +35,18 @@ function ultimaVez(nome) {
   const k = norm(nome);
   const ordenadas = [...estado.sessoes].sort((a, b) => String(b.fim || b.data).localeCompare(String(a.fim || a.data)));
   for (const s of ordenadas) {
-    const ex = (s.exercicios || []).find((e) => norm(e.nome) === k && (e.series || []).some((x) => x.feito));
-    if (ex) return { data: s.data, series: ex.series.filter((x) => x.feito).map((x) => ({ carga: x.carga, reps: x.reps })) };
+    const ex = (s.exercicios || []).find((e) => norm(e.nome) === k && !e.cardio && (e.series || []).some((x) => x.feito && x.tipo !== 'aq'));
+    if (ex) return { data: s.data, series: ex.series.filter((x) => x.feito && x.tipo !== 'aq').map((x) => ({ carga: x.carga, reps: x.reps })) };
+  }
+  return null;
+}
+
+function ultimoCardio(nome) {
+  const k = norm(nome);
+  const ordenadas = [...estado.sessoes].sort((a, b) => String(b.fim || b.data).localeCompare(String(a.fim || a.data)));
+  for (const s of ordenadas) {
+    const ex = (s.exercicios || []).find((e) => norm(e.nome) === k && e.cardio && e.feito && e.minutos);
+    if (ex) return { data: s.data, minutos: ex.minutos };
   }
   return null;
 }
@@ -48,6 +59,10 @@ export function iniciarTreino(treino) {
     inicio: Date.now(),
     nota: '',
     exercicios: (treino.exercicios || []).map((ex) => {
+      if (ex.cardio) {
+        const uc = ultimoCardio(ex.nome);
+        return { nome: ex.nome, cardio: true, obs: ex.obs || '', descanso: 0, planoMin: ex.minutos || null, ultimaMin: uc, minutos: String(ex.minutos || (uc ? uc.minutos : '') || ''), feito: false, series: [] };
+      }
       const ult = ultimaVez(ex.nome);
       const n = Math.max(1, ex.series || 1);
       const series = [];
@@ -101,10 +116,29 @@ function textoPlano(ex) {
   return p.join(' · ');
 }
 
+function cartaoCardio(ex, i) {
+  return `
+  <section class="ex-card">
+    <h3>${escaparHtml(ex.nome)} <span class="selo">cardio</span></h3>
+    <p class="mudo peq">${ex.planoMin ? `Meta: ${ex.planoMin} min` : 'Por tempo'}</p>
+    ${ex.ultimaMin ? `<p class="ultima">Última vez (${formatarDataCurta(ex.ultimaMin.data)}): ${ex.ultimaMin.minutos} min</p>` : ''}
+    ${ex.obs ? `<p class="obs">${escaparHtml(ex.obs)}</p>` : ''}
+    <div class="serie cardio-linha ${ex.feito ? 'feita' : ''}">
+      <input class="in-num" inputmode="numeric" data-t="minutos" data-e="${i}" value="${escaparHtml(ex.minutos)}" placeholder="min" aria-label="Minutos de ${escaparHtml(ex.nome)}">
+      <span class="mudo">minutos</span>
+      <button type="button" class="check ${ex.feito ? 'on' : ''}" data-t="cardio-check" data-e="${i}" aria-pressed="${ex.feito}" aria-label="Cardio feito">✔</button>
+    </div>
+  </section>`;
+}
+
+const ROTULO_TIPO = { aq: 'A', dr: 'D', fa: 'F' };
+const PROXIMO_TIPO = { undefined: 'aq', aq: 'dr', dr: 'fa', fa: undefined };
+
 function cartaoExercicio(ex, i) {
+  if (ex.cardio) return cartaoCardio(ex, i);
   const linhas = ex.series.map((s, j) => `
     <div class="serie ${s.feito ? 'feita' : ''}">
-      <span class="num">${j + 1}</span>
+      <button type="button" class="num tipo-${s.tipo || 'n'}" data-t="tipo" data-e="${i}" data-s="${j}" aria-label="Série ${j + 1}${s.tipo === 'aq' ? ', aquecimento' : s.tipo === 'dr' ? ', drop' : s.tipo === 'fa' ? ', até a falha' : ''}. Toque para mudar o tipo.">${ROTULO_TIPO[s.tipo] || j + 1}</button>
       <input class="in-num" inputmode="decimal" data-t="carga" data-e="${i}" data-s="${j}" value="${escaparHtml(s.carga)}" placeholder="kg" aria-label="Carga da série ${j + 1} em quilos">
       <input class="in-num" inputmode="numeric" data-t="reps" data-e="${i}" data-s="${j}" value="${escaparHtml(s.reps)}" placeholder="reps" aria-label="Repetições da série ${j + 1}">
       <button type="button" class="check ${s.feito ? 'on' : ''}" data-t="check" data-e="${i}" data-s="${j}" aria-pressed="${s.feito}" aria-label="Série ${j + 1} feita">✔</button>
@@ -116,12 +150,14 @@ function cartaoExercicio(ex, i) {
     <p class="mudo peq">${escaparHtml(textoPlano(ex))}</p>
     ${ultima ? `<p class="ultima">${escaparHtml(ultima)}</p>` : ''}
     ${ex.obs ? `<p class="obs">${escaparHtml(ex.obs)}</p>` : ''}
+    <p class="dica-tipos">Toque no número da série para marcar: <b>A</b> aquecimento · <b>D</b> drop · <b>F</b> falha</p>
     <div class="series">
       <div class="serie cab"><span>Série</span><span>kg</span><span>Reps</span><span></span></div>
       ${linhas}
     </div>
     <div class="ex-rodape">
       <button type="button" class="link" data-t="mais" data-e="${i}">+ Série</button>
+      <button type="button" class="link" data-t="anilhas" data-e="${i}">Anilhas</button>
       ${ex.series.length > 1 ? `<button type="button" class="link" data-t="menos" data-e="${i}">− Série</button>` : ''}
     </div>
   </section>`;
@@ -142,7 +178,7 @@ function desenhar() {
   if (novo) novo.scrollTop = y;
 }
 
-const volumeAtual = () => volumeDasSeries(S.exercicios.map((e) => ({ series: e.series.map((x) => ({ carga: numero(x.carga), reps: numero(x.reps), feito: x.feito })) })));
+const volumeAtual = () => volumeDasSeries(S.exercicios.map((e) => ({ series: e.series.map((x) => ({ carga: numero(x.carga), reps: numero(x.reps), feito: x.feito, tipo: x.tipo })) })));
 
 function atualizarRelogio() {
   const el = raiz && raiz.querySelector('#t-relogio');
@@ -153,6 +189,7 @@ function aoDigitar(e) {
   const t = e.target;
   if (!t.dataset) return;
   if (t.dataset.t === 'nota') { S.nota = t.value; guardar(); return; }
+  if (t.dataset.t === 'minutos') { S.exercicios[Number(t.dataset.e)].minutos = t.value; guardar(); return; }
   if (t.dataset.t !== 'carga' && t.dataset.t !== 'reps') return;
   S.exercicios[Number(t.dataset.e)].series[Number(t.dataset.s)][t.dataset.t] = t.value;
   guardar();
@@ -165,7 +202,19 @@ function aoClicar(e) {
   if (!b) return;
   const acao = b.dataset.t;
   const i = Number(b.dataset.e);
-  if (acao === 'check') {
+  if (acao === 'tipo') {
+    const sr = S.exercicios[i].series[Number(b.dataset.s)];
+    const prox = PROXIMO_TIPO[sr.tipo];
+    if (prox) sr.tipo = prox; else delete sr.tipo;
+    guardar(); desenhar();
+  } else if (acao === 'cardio-check') {
+    S.exercicios[i].feito = !S.exercicios[i].feito;
+    guardar(); desenhar();
+  } else if (acao === 'anilhas') {
+    const ex = S.exercicios[i];
+    const ref = ex.series.map((x) => numero(x.carga)).find((c) => c != null);
+    abrirAnilhas(ref ?? null);
+  } else if (acao === 'check') {
     const s = S.exercicios[i].series[Number(b.dataset.s)];
     s.feito = !s.feito;
     guardar();
@@ -173,7 +222,7 @@ function aoClicar(e) {
     if (s.feito) {
       const ex0 = S.exercicios[i];
       const c = numero(s.carga);
-      if (c != null && ex0.maxAnt != null && c > ex0.maxAnt && !ex0.recorde) { ex0.recorde = true; guardar(); toast(`🏆 Recorde pessoal em ${ex0.nome}: ${formatarNumero(c)} kg!`); }
+      if (s.tipo !== 'aq' && c != null && ex0.maxAnt != null && c > ex0.maxAnt && !ex0.recorde) { ex0.recorde = true; guardar(); toast(`🏆 Recorde pessoal em ${ex0.nome}: ${formatarNumero(c)} kg!`); }
       const botao = raiz.querySelector(`[data-t="check"][data-e="${i}"][data-s="${b.dataset.s}"]`);
       if (botao) botao.classList.add('pop');
       destravarAudio();
@@ -296,24 +345,26 @@ async function cancelar() {
 }
 
 async function finalizar() {
-  const total = S.exercicios.reduce((n, e) => n + e.series.length, 0);
-  const feitas = S.exercicios.reduce((n, e) => n + e.series.filter((s) => s.feito).length, 0);
+  const total = S.exercicios.reduce((n, e) => n + (e.cardio ? 1 : e.series.length), 0);
+  const feitas = S.exercicios.reduce((n, e) => n + (e.cardio ? (e.feito ? 1 : 0) : e.series.filter((s) => s.feito).length), 0);
   if (feitas === 0) {
     if (!(await confirmar('Você não marcou nenhuma série como feita. Salvar mesmo assim?', { ok: 'Salvar' }))) return;
   } else if (feitas < total) {
     if (!(await confirmar(`Faltam ${total - feitas} série(s) sem marcar. Finalizar mesmo assim?`, { ok: 'Finalizar' }))) return;
   }
   const fim = Date.now();
-  const exercicios = S.exercicios.map((e) => ({
-    nome: e.nome,
-    obs: e.obs || null,
-    series: e.series.map((x) => ({ carga: numero(x.carga), reps: numero(x.reps), feito: x.feito }))
-  }));
+  const exercicios = S.exercicios.map((e) => (e.cardio
+    ? { nome: e.nome, cardio: true, minutos: numero(e.minutos), feito: e.feito, obs: e.obs || null, series: [] }
+    : {
+      nome: e.nome,
+      obs: e.obs || null,
+      series: e.series.map((x) => ({ carga: numero(x.carga), reps: numero(x.reps), feito: x.feito, ...(x.tipo ? { tipo: x.tipo } : {}) }))
+    }));
   const volume = volumeDasSeries(exercicios);
   // Recorde = carga maior que qualquer uma já feita antes naquele exercício (só vale se já existia histórico).
   const recordes = [];
   S.exercicios.forEach((e, i) => {
-    const cargas = exercicios[i].series.filter((x) => x.feito && x.carga != null).map((x) => x.carga);
+    const cargas = exercicios[i].series.filter((x) => x.feito && x.tipo !== 'aq' && x.carga != null).map((x) => x.carga);
     const max = cargas.length ? Math.max(...cargas) : null;
     if (max != null && e.maxAnt != null && max > e.maxAnt) recordes.push({ nome: e.nome, carga: max });
   });

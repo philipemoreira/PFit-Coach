@@ -1,5 +1,5 @@
 // Guarda na memória tudo o que o app mostra e mantém atualizado em tempo real.
-import { db, onSnapshot, collection, doc, query, orderBy, limit } from './firebase.js';
+import { db, onSnapshot, collection, doc, query, orderBy, limit, where } from './firebase.js';
 
 export const estado = {
   uid: null,
@@ -12,7 +12,15 @@ export const estado = {
   sessoes: [],
   peso: [],
   checks: [],
-  agua: []
+  agua: [],
+  medidas: [],
+  vinculo: null,      // se tenho um personal: { personalUid, personalNome, ... }
+  metasConfig: null,  // metas definidas pelo meu personal
+  recados: [],
+  alunos: [],         // (para personal) vínculos dos meus alunos
+  modelos: [],        // (para personal) modelos de treino
+  alimentos: [],      // meus alimentos (biblioteca)
+  refeicoes: []       // o que comi, por dia
 };
 
 let paradores = [];
@@ -55,6 +63,26 @@ export function iniciarDados(uid, email, aoMudar) {
   ouvir('peso', 'peso', [orderBy('data', 'desc'), limit(400)]);
   ouvir('checks', 'checks', [orderBy('data', 'desc'), limit(60)]);
   ouvir('agua', 'agua', [orderBy('data', 'desc'), limit(120)]);
+  ouvir('medidas', 'medidas', [orderBy('data', 'desc'), limit(120)]);
+  ouvir('recados', 'recados', [orderBy('criadoEm', 'desc'), limit(40)]);
+  ouvir('modelos', 'modelos', [orderBy('ordem', 'asc')]);
+  ouvir('alimentos', 'alimentos', [orderBy('nome', 'asc')]);
+  ouvir('refeicoes', 'refeicoes', [orderBy('data', 'desc'), limit(60)]);
+
+  // Meu vínculo com um personal (o documento tem o meu próprio código de usuário como nome).
+  paradores.push(onSnapshot(doc(db, 'vinculos', uid), (snap) => {
+    estado.vinculo = snap.exists() ? { ...snap.data() } : null;
+    aoMudar('vinculo');
+  }, (e) => console.error(e)));
+  paradores.push(onSnapshot(doc(db, 'usuarios', uid, 'config', 'metas'), (snap) => {
+    estado.metasConfig = snap.exists() ? { ...snap.data() } : null;
+    aoMudar('metasConfig');
+  }, (e) => console.error(e)));
+  // Meus alunos (só aparece algo se eu for personal de alguém).
+  paradores.push(onSnapshot(query(collection(db, 'vinculos'), where('personalUid', '==', uid)), (snap) => {
+    estado.alunos = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    aoMudar('alunos');
+  }, (e) => console.error(e)));
 }
 
 export function pararDados() {
@@ -70,4 +98,12 @@ export function pararDados() {
   estado.peso = [];
   estado.checks = [];
   estado.agua = [];
+  estado.medidas = [];
+  estado.vinculo = null;
+  estado.metasConfig = null;
+  estado.recados = [];
+  estado.alunos = [];
+  estado.modelos = [];
+  estado.alimentos = [];
+  estado.refeicoes = [];
 }

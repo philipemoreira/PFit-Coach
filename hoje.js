@@ -6,6 +6,8 @@ import { salvarDoc } from './dados.js';
 import { rascunhoSalvo, retomarTreino, descartarRascunho } from './treinar.js';
 import { regrasDoDia } from './dieta.js';
 import { nav } from './nav.js';
+import { blocoRecadosHoje } from './recados.js';
+import { blocoMacros } from './alimentos.js';
 import { volumeDoDia, metaVolume, metaAgua, aguaDoDia, sequenciaSemanas, formatarVolume } from './metricas.js';
 
 const LETRAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']; // segunda a domingo
@@ -50,6 +52,14 @@ function blocoHero() {
   const doDia = estado.treinos.filter((t) => (t.dias || []).includes(hoje.getDay()));
   const feitos = new Set(estado.sessoes.filter((s) => s.data === dataStr).map((s) => s.treinoId));
 
+  if (!estado.treinos.length && estado.vinculo) {
+    return `
+    <article class="hero-treino">
+      <span class="rotulo-hero">Treino de hoje</span>
+      <h2>Aguardando seu personal</h2>
+      <p>${escaparHtml(estado.vinculo.personalNome || 'Seu personal')} ainda não montou seu treino.</p>
+    </article>`;
+  }
   if (!estado.treinos.length) {
     return `
     <article class="hero-treino">
@@ -133,20 +143,26 @@ function blocoChecklist() {
     return `
     <section class="card">
       <h2>Dieta de hoje</h2>
-      <p class="mudo">Você ainda não cadastrou regras para hoje.</p>
-      <button class="btn secundario cheio" type="button" data-acao="regra-nova" data-grupo="sempre">Cadastrar regras</button>
+      ${estado.vinculo
+    ? '<p class="mudo">Seu personal ainda não cadastrou regras para hoje.</p>'
+    : '<p class="mudo">Você ainda não cadastrou regras para hoje.</p><button class="btn secundario cheio" type="button" data-acao="regra-nova" data-grupo="sempre">Cadastrar regras</button>'}
     </section>`;
   }
   const marcadas = marcadasHoje();
+  const agora = new Date();
+  const hhmm = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+  const atrasada = (r) => !!r.horario && r.horario < hhmm && !marcadas[r.id];
+  const nAtrasadas = regras.filter(atrasada).length;
   return `
   <section class="card">
     <h2>Regras de hoje</h2>
+    ${nAtrasadas ? `<p class="alerta-atraso" role="status">⏰ ${nAtrasadas} ${nAtrasadas === 1 ? 'regra passou' : 'regras passaram'} do horário sem marcar. Se já cumpriu, marque; se pulou, tudo bem, siga o resto do dia.</p>` : ''}
     <div class="lista">
       ${regras.map((r) => {
         const on = !!marcadas[r.id];
-        return `<button type="button" class="regra-item ${on ? 'feita' : ''}" role="checkbox" aria-checked="${on}" data-acao="regra-marcar" data-id="${escaparHtml(r.id)}">
+        return `<button type="button" class="regra-item ${on ? 'feita' : ''} ${atrasada(r) ? 'atrasada' : ''}" role="checkbox" aria-checked="${on}" data-acao="regra-marcar" data-id="${escaparHtml(r.id)}">
           <span class="caixa">${on ? '✔' : ''}</span>
-          <span class="regra-txt">${r.horario ? `<small class="hora">${escaparHtml(r.horario)}</small>` : ''}${escaparHtml(r.texto)}</span>
+          <span class="regra-txt">${r.horario ? `<small class="hora">${escaparHtml(r.horario)}${atrasada(r) ? ' · atrasada' : ''}</small>` : ''}${escaparHtml(r.texto)}</span>
         </button>`;
       }).join('')}
     </div>
@@ -168,6 +184,7 @@ export const hoje = {
       ${blocoTiles()}
     </section>
     ${blocoDia()}
+    <div class="grade-cards">${blocoMacros()}${blocoRecadosHoje()}</div>
     ${blocoChecklist()}`;
   },
   acoes: {

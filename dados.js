@@ -1,5 +1,5 @@
 // Ler e gravar no Firebase. Tudo fica dentro de usuarios/{uid}, só do dono da conta.
-import { db, doc, collection, setDoc, deleteDoc, getDocs, writeBatch } from './firebase.js';
+import { db, doc, collection, setDoc, deleteDoc, getDocs, writeBatch, query, orderBy, limit } from './firebase.js';
 import { toast } from './util.js';
 
 // O Firebase não aceita valores "undefined": isso limpa antes de gravar.
@@ -36,4 +36,32 @@ export async function gravarVarios(uid, sub, itens) {
     });
     await lote.commit();
   }
+}
+
+// Coleções de nível superior (convites e vínculos): ficam fora de usuarios/{uid}.
+export function salvarGlobal(colecao, id, dados) {
+  return setDoc(doc(db, colecao, id), limpo(dados));
+}
+export function removerGlobal(colecao, id) {
+  return deleteDoc(doc(db, colecao, id));
+}
+
+// Lê as últimas fotos de alguém (leitura única, sem ficar escutando: as imagens são pesadas).
+export async function lerFotos(uid, max = 30) {
+  const snap = await getDocs(query(collection(db, 'usuarios', uid, 'fotos'), orderBy('data', 'desc'), limit(max)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// Apaga uma subcoleção inteira da pessoa (usado em "Excluir minha conta").
+export async function apagarSubcolecao(uid, sub) {
+  const snap = await getDocs(collection(db, 'usuarios', uid, sub));
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const lote = writeBatch(db);
+    snap.docs.slice(i, i + 400).forEach((d) => lote.delete(d.ref));
+    await lote.commit();
+  }
+}
+
+export function apagarPerfil(uid) {
+  return deleteDoc(doc(db, 'usuarios', uid));
 }

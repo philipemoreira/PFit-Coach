@@ -1,16 +1,119 @@
 rules_version = '2';
-
-// Regras de segurança do Firestore do app Treino (Fase 1).
-// Cada pessoa só lê e escreve o que está dentro do próprio "usuarios/{o id dela}".
-// Todo o resto é negado. Na Fase 2 vamos acrescentar o acesso do personal aos alunos ligados a ele.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /usuarios/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
 
-      match /{documento=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+    // ---------- Funções de apoio ----------
+    function logado() {
+      return request.auth != null;
+    }
+    function ehDono(uid) {
+      return logado() && request.auth.uid == uid;
+    }
+    // O aluno tem um personal quando existe o documento vinculos/{uid do aluno}.
+    function temPersonal(alunoUid) {
+      return exists(/databases/$(database)/documents/vinculos/$(alunoUid));
+    }
+    function ehPersonalDe(alunoUid) {
+      return logado()
+        && exists(/databases/$(database)/documents/vinculos/$(alunoUid))
+        && get(/databases/$(database)/documents/vinculos/$(alunoUid)).data.personalUid == request.auth.uid;
+    }
+
+    // ---------- Dados de cada pessoa ----------
+    match /usuarios/{userId} {
+      // O perfil: só o dono escreve. O personal do aluno pode ler.
+      allow read: if ehDono(userId) || ehPersonalDe(userId);
+      allow write: if ehDono(userId);
+
+      // Treino e dieta: quem monta é o personal. O dono só edita se NÃO tiver personal.
+      match /treinos/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow write: if (ehDono(userId) && !temPersonal(userId)) || ehPersonalDe(userId);
       }
+      match /regras/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow write: if (ehDono(userId) && !temPersonal(userId)) || ehPersonalDe(userId);
+      }
+
+      // Metas definidas pelo personal para o aluno.
+      match /config/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow write: if ehPersonalDe(userId);
+      }
+
+      // Recados entre aluno e personal.
+      match /recados/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow create, update, delete: if ehDono(userId) || ehPersonalDe(userId);
+      }
+
+      // Treinos feitos, dieta marcada, peso, água e medidas: o dono escreve; o personal só lê.
+      match /sessoes/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow write: if ehDono(userId);
+      }
+      match /checks/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow write: if ehDono(userId);
+      }
+      match /peso/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow write: if ehDono(userId);
+      }
+      match /agua/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow write: if ehDono(userId);
+      }
+      match /medidas/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow write: if ehDono(userId);
+      }
+
+      // Alimentos e registro de refeições: o dono escreve; o personal do aluno lê.
+      match /alimentos/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow write: if ehDono(userId);
+      }
+      match /refeicoes/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow write: if ehDono(userId);
+      }
+      // Fotos: o personal só lê se o aluno marcou "compartilhar".
+      match /fotos/{id} {
+        allow read: if ehDono(userId)
+          || (ehPersonalDe(userId)
+              && get(/databases/$(database)/documents/usuarios/$(userId)).data.get('compartilhaFotos', false) == true);
+        allow write: if ehDono(userId);
+      }
+
+      // Modelos de treino do personal: só dele.
+      match /modelos/{id} {
+        allow read, write: if ehDono(userId);
+      }
+    }
+
+    // ---------- Convites: o personal cria um código; o aluno consulta UM código por vez ----------
+    match /convites/{codigo} {
+      allow get: if logado();
+      allow list: if false;
+      allow create: if logado() && request.resource.data.personalUid == request.auth.uid;
+      allow update: if logado() && resource.data.personalUid == request.auth.uid
+                    && request.resource.data.personalUid == request.auth.uid;
+      allow delete: if logado() && resource.data.personalUid == request.auth.uid;
+    }
+
+    // ---------- Vínculos: quem aceita é o ALUNO, usando um código válido do personal ----------
+    match /vinculos/{alunoUid} {
+      allow get: if logado() && (request.auth.uid == alunoUid || resource.data.personalUid == request.auth.uid);
+      allow list: if logado() && resource.data.personalUid == request.auth.uid;
+      allow create: if ehDono(alunoUid)
+                    && request.resource.data.alunoUid == alunoUid
+                    && request.resource.data.personalUid != alunoUid
+                    && exists(/databases/$(database)/documents/convites/$(request.resource.data.codigo))
+                    && get(/databases/$(database)/documents/convites/$(request.resource.data.codigo)).data.personalUid == request.resource.data.personalUid;
+      allow update: if false;
+      // O aluno pode se desligar e o personal pode remover o aluno.
+      allow delete: if logado() && (request.auth.uid == alunoUid || resource.data.personalUid == request.auth.uid);
     }
   }
 }
