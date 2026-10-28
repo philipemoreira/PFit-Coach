@@ -967,3 +967,61 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 .serie2.feita { border-color: rgba(198, 244, 50, .35); }
 .selo { font-weight: 700; }
 .lista-metas > div { border-color: var(--borda); }
+
+/* ============ Treino: topo e base mais baixos, séries com mais espaço ============ */
+.treinar-topo { padding: calc(env(safe-area-inset-top) + 6px) 12px 6px; }
+.treinar-topo .icone-btn { width: 40px; height: 40px; border-radius: 13px; font-size: 16px; }
+.treinar-topo .btn.pequeno { min-height: 38px; padding: 0 14px; }
+.treinar-titulo strong { font-size: 14px; max-width: 50vw; }
+.treinar-titulo .t-linha { display: flex; align-items: baseline; gap: 8px; font-size: inherit; }
+.treinar-titulo .t-linha > span { font-size: 20px; }
+.treinar-titulo .t-volume { font-size: 12px; }
+.t-progresso { padding: 0 14px 6px; }
+.t-prog-barra { height: 4px; }
+.pontos { padding: 0 14px 6px; gap: 6px; }
+.ponto { width: 30px; height: 30px; font-size: 12px; border-width: 1.5px; }
+.ex-solo { padding-top: 0; }
+.ex-pos { margin-bottom: 2px; font-size: 13px; }
+.ex-nome { font-size: 25px; letter-spacing: -.6px; }
+.ex-plano { margin-top: 2px; font-size: 14px; }
+.serie2 { gap: 8px; padding: 6px; margin-top: 8px; }
+.in-num.grande { min-height: 64px; font-size: 30px; }
+.serie2 .check { width: 56px; height: 56px; }
+.serie2 .num { height: 44px; width: 40px; }
+.serie2.cab2 { margin-top: 8px; }
+.ex-rodape { margin-top: 10px; }
+.btn-ex { height: 40px; font-size: 13px; }
+.espaco-descanso { height: 70px; }
+.t-nav { padding: 8px 14px calc(env(safe-area-inset-bottom) + 8px); }
+.t-nav .btn { height: 50px; font-size: 16px; }
+.treinar .descanso { bottom: calc(env(safe-area-inset-bottom) + 72px); }
+.midia { margin: 12px 0 4px; }
+
+/* ============ Treino: topo e base mais baixos, séries com mais espaço ============ */
+.treinar-topo { padding: calc(env(safe-area-inset-top) + 6px) 12px 6px; }
+.treinar-topo .icone-btn { width: 40px; height: 40px; border-radius: 13px; font-size: 16px; }
+.treinar-topo .btn.pequeno { min-height: 38px; padding: 0 14px; }
+.treinar-titulo strong { font-size: 14px; max-width: 50vw; }
+.treinar-titulo .t-linha { display: flex; align-items: baseline; gap: 8px; font-size: inherit; }
+.treinar-titulo .t-linha > span { font-size: 20px; }
+.treinar-titulo .t-volume { font-size: 12px; }
+.t-progresso { padding: 0 14px 6px; }
+.t-prog-barra { height: 4px; }
+.pontos { padding: 0 14px 6px; gap: 6px; }
+.ponto { width: 30px; height: 30px; font-size: 12px; border-width: 1.5px; }
+.ex-solo { padding-top: 0; }
+.ex-pos { margin-bottom: 2px; font-size: 13px; }
+.ex-nome { font-size: 25px; letter-spacing: -.6px; }
+.ex-plano { margin-top: 2px; font-size: 14px; }
+.serie2 { gap: 8px; padding: 6px; margin-top: 8px; }
+.in-num.grande { min-height: 64px; font-size: 30px; }
+.serie2 .check { width: 56px; height: 56px; }
+.serie2 .num { height: 44px; width: 40px; }
+.serie2.cab2 { margin-top: 8px; }
+.ex-rodape { margin-top: 10px; }
+.btn-ex { height: 40px; font-size: 13px; }
+.espaco-descanso { height: 70px; }
+.t-nav { padding: 8px 14px calc(env(safe-area-inset-bottom) + 8px); }
+.t-nav .btn { height: 50px; font-size: 16px; }
+.treinar .descanso { bottom: calc(env(safe-area-inset-bottom) + 72px); }
+.midia { margin: 12px 0 4px; }

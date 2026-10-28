@@ -102,6 +102,18 @@ function abrir() {
   desenhar();
   raiz.addEventListener('click', aoClicar);
   raiz.addEventListener('input', aoDigitar);
+  // Ao tocar num campo de número, o valor já vem selecionado: é só digitar por cima.
+  raiz.addEventListener('focusin', (e) => {
+    const t = e.target;
+    if (t && t.dataset && (t.dataset.t === 'carga' || t.dataset.t === 'reps')) setTimeout(() => { try { t.select(); } catch { /* ok */ } }, 0);
+  });
+  // Tecla Enter/Ok: no kg vai para as reps; nas reps fecha o teclado. A série só é marcada ao tocar no check.
+  raiz.addEventListener('keydown', (e) => {
+    const t = e.target;
+    if (e.key !== 'Enter' || !t || !t.dataset) return;
+    if (t.dataset.t === 'carga') { e.preventDefault(); const r = raiz.querySelector(`[data-t="reps"][data-e="${t.dataset.e}"][data-s="${t.dataset.s}"]`); if (r) r.focus(); }
+    else if (t.dataset.t === 'reps') { e.preventDefault(); t.blur(); }
+  });
   // Deslizar para o lado troca de exercício (fora dos campos de número).
   let x0 = null; let y0 = null;
   raiz.addEventListener('touchstart', (e) => {
@@ -167,8 +179,8 @@ function htmlSeries(ex, i) {
   const linhas = ex.series.map((s, j) => `
     <div class="serie2 ${s.feito ? 'feita' : ''}">
       <button type="button" class="num tipo-${s.tipo || 'n'}" data-t="tipo" data-e="${i}" data-s="${j}" aria-label="Série ${j + 1}${s.tipo ? ', ' + NOME_TIPO[s.tipo] : ''}. Toque para mudar o tipo">${s.tipo ? LETRA_TIPO[s.tipo] : j + 1}</button>
-      <input class="in-num grande" inputmode="decimal" data-t="carga" data-e="${i}" data-s="${j}" value="${escaparHtml(s.carga)}" placeholder="0" aria-label="Carga da série ${j + 1} em quilos">
-      <input class="in-num grande" inputmode="numeric" data-t="reps" data-e="${i}" data-s="${j}" value="${escaparHtml(s.reps)}" placeholder="0" aria-label="Repetições da série ${j + 1}">
+      <input class="in-num grande" inputmode="decimal" enterkeyhint="next" data-t="carga" data-e="${i}" data-s="${j}" value="${escaparHtml(s.carga)}" placeholder="0" aria-label="Carga da série ${j + 1} em quilos">
+      <input class="in-num grande" inputmode="numeric" enterkeyhint="done" data-t="reps" data-e="${i}" data-s="${j}" value="${escaparHtml(s.reps)}" placeholder="0" aria-label="Repetições da série ${j + 1}">
       <button type="button" class="check ${s.feito ? 'on' : ''}" data-t="check" data-e="${i}" data-s="${j}" aria-pressed="${s.feito}" aria-label="${s.feito ? 'Desmarcar' : 'Concluir'} série ${j + 1}">${CHECK}</button>
     </div>`).join('');
   return `
@@ -265,7 +277,7 @@ function htmlExercicio(ex, i) {
   const completo = exercicioCompleto(ex);
   return `
     <section class="ex-solo">
-      <p class="ex-pos">Exercício ${i + 1} de ${S.exercicios.length}</p>
+      <p class="ex-pos" id="ex-pos-txt">Exercício ${i + 1} de ${S.exercicios.length} · ${totalFeitas()}/${totalSeries()} séries</p>
       <div class="ex-linha-nome"><h2 class="ex-nome">${escaparHtml(ex.nome)}${ex.cardio ? ' <span class="selo">cardio</span>' : ''}</h2><span class="selo ${completo ? 'ok' : ''}" id="selo-ex">${seriesFeitas(ex)}/${seriesTotal(ex)}</span></div>
       ${ex.cardio ? '' : `<p class="ex-plano">${escaparHtml(textoPlano(ex))}</p>`}
       ${ex.obs ? `<p class="obs">${escaparHtml(ex.obs)}</p>` : ''}
@@ -281,10 +293,10 @@ function desenhar() {
   cont.innerHTML = `
     <div class="treinar-topo">
       <button class="icone-btn" type="button" data-t="cancelar" aria-label="Sair do treino sem salvar">✕</button>
-      <div class="treinar-titulo"><strong>${escaparHtml(S.treinoNome)}</strong><span id="t-relogio">${formatarDuracao((Date.now() - S.inicio) / 1000)}</span><small id="t-volume" class="t-volume">${formatarVolume(volumeAtual())}</small></div>
+      <div class="treinar-titulo"><strong>${escaparHtml(S.treinoNome)}</strong><span class="t-linha"><span id="t-relogio">${formatarDuracao((Date.now() - S.inicio) / 1000)}</span><small id="t-volume" class="t-volume">${formatarVolume(volumeAtual())}</small></span></div>
       ${noResumo() ? '<span class="topo-vazio"></span>' : '<button class="btn pequeno" type="button" data-t="finalizar">Finalizar</button>'}
     </div>
-    <div class="t-progresso" aria-label="Progresso do treino"><div class="t-prog-barra"><i style="width:${progressoPct()}%"></i></div><small id="t-prog-txt">${totalFeitas()} de ${totalSeries()} séries concluídas</small></div>
+    <div class="t-progresso" aria-label="Progresso do treino"><div class="t-prog-barra"><i style="width:${progressoPct()}%"></i></div></div>
     <div class="pontos" id="pontos" role="group" aria-label="Exercícios">${htmlPontos()}</div>
     <div class="treinar-corpo" id="treinar-corpo">${noResumo() ? htmlResumo() : htmlExercicio(S.exercicios[S.atual], S.atual)}<div class="espaco-descanso"></div></div>
     <div class="t-nav" id="t-nav">${htmlNavegacao()}</div>`;
@@ -302,8 +314,8 @@ function atualizar() {
   if (selo) { selo.textContent = `${seriesFeitas(ex)}/${seriesTotal(ex)}`; selo.classList.toggle('ok', exercicioCompleto(ex)); }
   const barra = raiz.querySelector('.t-prog-barra i');
   if (barra) barra.style.width = `${progressoPct()}%`;
-  const txt = raiz.querySelector('#t-prog-txt');
-  if (txt) txt.textContent = `${totalFeitas()} de ${totalSeries()} séries concluídas`;
+  const pos = raiz.querySelector('#ex-pos-txt');
+  if (pos) pos.textContent = `Exercício ${S.atual + 1} de ${S.exercicios.length} · ${totalFeitas()}/${totalSeries()} séries`;
   const pontos = raiz.querySelector('#pontos');
   if (pontos) pontos.innerHTML = htmlPontos();
   const nv = raiz.querySelector('#t-nav');
@@ -340,6 +352,30 @@ function aoDigitar(e) {
   guardar();
   const v = raiz.querySelector('#t-volume');
   if (v) v.textContent = formatarVolume(volumeAtual());
+}
+
+// Marca ou desmarca uma série (só quando a pessoa toca no check).
+function alternarSerie(i, j) {
+  const s = S.exercicios[i].series[j];
+  s.feito = !s.feito;
+  if (s.feito) {
+    // Se a pessoa não digitou nada, usa o que veio da última vez ou da série de cima.
+    const ant = anteriorDe(S.exercicios[i], j);
+    const cima = j > 0 ? S.exercicios[i].series[j - 1] : null;
+    if (!String(s.carga || '').trim()) s.carga = ant && ant.carga != null ? String(ant.carga).replace('.', ',') : (cima ? cima.carga : s.carga);
+    if (!String(s.reps || '').trim()) s.reps = ant && ant.reps != null ? String(ant.reps) : (cima ? cima.reps : s.reps);
+  }
+  guardar();
+  atualizar();
+  if (s.feito) {
+    const ex0 = S.exercicios[i];
+    const c = numero(s.carga);
+    if (s.tipo !== 'aq' && c != null && ex0.maxAnt != null && c > ex0.maxAnt && !ex0.recorde) { ex0.recorde = true; guardar(); toast(`🏆 Recorde pessoal em ${ex0.nome}: ${formatarNumero(c)} kg!`); }
+    const botao = raiz.querySelector(`[data-t="check"][data-e="${i}"][data-s="${j}"]`);
+    if (botao) botao.classList.add('pop');
+    destravarAudio();
+    if (S.exercicios[i].descanso > 0) iniciarDescanso(S.exercicios[i].descanso);
+  }
 }
 
 function aoClicar(e) {
@@ -381,27 +417,7 @@ function aoClicar(e) {
     const ref = ex.series.map((x) => numero(x.carga)).find((c) => c != null);
     abrirAnilhas(ref ?? null);
   } else if (acao === 'check') {
-    const j = Number(b.dataset.s);
-    const s = S.exercicios[i].series[j];
-    s.feito = !s.feito;
-    if (s.feito) {
-      // Se a pessoa não digitou nada, usa o que veio da última vez ou da série de cima.
-      const ant = anteriorDe(S.exercicios[i], j);
-      const cima = j > 0 ? S.exercicios[i].series[j - 1] : null;
-      if (!String(s.carga || '').trim()) s.carga = ant && ant.carga != null ? String(ant.carga).replace('.', ',') : (cima ? cima.carga : s.carga);
-      if (!String(s.reps || '').trim()) s.reps = ant && ant.reps != null ? String(ant.reps) : (cima ? cima.reps : s.reps);
-    }
-    guardar();
-    atualizar();
-    if (s.feito) {
-      const ex0 = S.exercicios[i];
-      const c = numero(s.carga);
-      if (s.tipo !== 'aq' && c != null && ex0.maxAnt != null && c > ex0.maxAnt && !ex0.recorde) { ex0.recorde = true; guardar(); toast(`🏆 Recorde pessoal em ${ex0.nome}: ${formatarNumero(c)} kg!`); }
-      const botao = raiz.querySelector(`[data-t="check"][data-e="${i}"][data-s="${b.dataset.s}"]`);
-      if (botao) botao.classList.add('pop');
-      destravarAudio();
-      if (S.exercicios[i].descanso > 0) iniciarDescanso(S.exercicios[i].descanso);
-    }
+    alternarSerie(i, Number(b.dataset.s));
   } else if (acao === 'mais') {
     const ex = S.exercicios[i];
     const ult = ex.series[ex.series.length - 1];
