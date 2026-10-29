@@ -1070,3 +1070,53 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 .hero-treino.feito .feito-tit { font-size: 26px; }
 .bento .tile { min-height: 0; padding: 14px 18px; aspect-ratio: auto; }
 @media (min-width: 900px) { .bento .tile { padding: 22px; } }
+
+/* ---------- Estatísticas de carga ---------- */
+.volume-hoje { background: var(--card); border: 1px solid var(--borda); }
+.volume-num { font-family: var(--fonte-titulo); font-size: 64px; font-weight: 800; letter-spacing: -2.5px; line-height: 1; margin: 8px 0 10px; color: var(--destaque); font-variant-numeric: tabular-nums; }
+.volume-num small { font-size: 16px; font-weight: 600; letter-spacing: 0; color: var(--mudo); }
+.volume-hoje .btn.cheio { margin-top: 14px; }
+
+.stat-hero { border-radius: 28px; padding: 22px; margin-bottom: 14px; background: var(--card); border: 1px solid var(--borda); }
+.stat-rot { display: block; font-size: 12px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--mudo); }
+.stat-grande { display: block; font-family: var(--fonte-titulo); font-size: clamp(44px, 14vw, 72px); font-weight: 800; letter-spacing: -2.5px; line-height: 1.02; margin: 6px 0 4px; color: var(--destaque); font-variant-numeric: tabular-nums; }
+.stat-grande small { font-size: 20px; font-weight: 600; letter-spacing: 0; color: var(--mudo); }
+.stat-sub { font-size: 14px; color: var(--mudo); margin: 4px 0 0; line-height: 1.45; }
+.stat-marco { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--borda); }
+.stat-marco-topo { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--mudo); margin-bottom: 8px; }
+.stat-marco-topo strong { color: var(--texto); }
+.stat-marco small { display: block; margin-top: 6px; }
+
+.stat-grade { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 14px; }
+.stat-card { border-radius: 24px; padding: 18px 20px; background: var(--card); border: 1px solid var(--borda); }
+.stat-card.destaque { border-color: var(--destaque); background: var(--selo-bg); }
+.stat-num { display: block; font-family: var(--fonte-titulo); font-size: 40px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.05; margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
+.stat-num small { font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--mudo); }
+.stat-ok { color: var(--ok); font-weight: 700; }
+.stat-vazio { text-align: center; padding: 28px 20px; }
+.g-valor { fill: var(--texto); font-size: 9px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.stat-rec { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--borda); }
+.stat-rec:last-child { border-bottom: 0; }
+.stat-rec-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--card2); font-size: 20px; }
+.stat-rec-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; font-weight: 600; }
+.stat-rec-txt small { font-weight: 500; }
+.stat-rec strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (min-width: 700px) { .stat-grade { grid-template-columns: repeat(3, 1fr); } }
+
+/* ---------- Conquistas com barra de progresso ---------- */
+.conq-lista { display: grid; gap: 10px; margin: 8px 0 14px; }
+.conq-lin { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 18px; border: 1px solid var(--borda); background: var(--card2); color: var(--texto); font-family: inherit; }
+.conq-ico { flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: var(--card); font-size: 24px; }
+.conq-corpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.conq-corpo b { font-size: 15px; }
+.conq-trilho { display: block; height: 8px; border-radius: 8px; background: var(--card); overflow: hidden; border: 1px solid var(--borda); }
+.conq-trilho i { display: block; height: 100%; border-radius: 8px; background: var(--limao); min-width: 2px; transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.conq-trilho.grande { height: 14px; margin: 14px 0 8px; }
+.conq-cont { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--mudo); font-variant-numeric: tabular-nums; }
+.conq-cont em { font-style: normal; font-weight: 800; color: var(--destaque); }
+.grande-cont { font-size: 16px; }
+.conq-folha { text-align: center; padding: 6px 0 4px; }
+.conq-folha-ico { display: grid; place-items: center; width: 84px; height: 84px; margin: 0 auto 6px; border-radius: 26px; background: var(--card2); font-size: 44px; filter: grayscale(1); opacity: .6; }
+.conq-folha-ico.ok { filter: none; opacity: 1; background: var(--selo-bg); }
+@media (min-width: 900px) { .conq-lista { grid-template-columns: repeat(2, 1fr); } }

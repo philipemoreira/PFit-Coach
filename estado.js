@@ -66,7 +66,7 @@ export function iniciarDados(uid, email, aoMudar) {
   ouvir('treinos', 'treinos', [orderBy('ordem', 'asc')]);
   ouvir('regras', 'regras', [orderBy('ordem', 'asc')]);
   ouvir('dietaItens', 'dietaItens', [orderBy('ordem', 'asc')]);
-  ouvir('sessoes', 'sessoes', [orderBy('data', 'desc'), limit(400)]);
+  ouvir('sessoes', 'sessoes', [orderBy('data', 'desc'), limit(1500)]);
   ouvir('peso', 'peso', [orderBy('data', 'desc'), limit(400)]);
   ouvir('checks', 'checks', [orderBy('data', 'desc'), limit(60)]);
   ouvir('agua', 'agua', [orderBy('data', 'desc'), limit(120)]);

@@ -8,6 +8,7 @@ import { hoje } from './hoje.js';
 import { treinos } from './treinos.js';
 import { dieta } from './dieta.js';
 import { progresso } from './progresso.js';
+import { estatisticas } from './estatisticas.js';
 import { contaTela, configTela } from './perfil.js';
 import { personal, pararPersonal } from './personal.js';
 import { acoesRecados } from './recados.js';
@@ -37,7 +38,8 @@ const ABAS = [
 // Telas que não ficam no menu de baixo: abrem pela foto/inicial no topo.
 const EXTRAS = [
   { id: 'conta', nome: 'Minha conta', tela: contaTela },
-  { id: 'config', nome: 'Configurações', tela: configTela }
+  { id: 'config', nome: 'Configurações', tela: configTela },
+  { id: 'stats', nome: 'Estatísticas', tela: estatisticas, pai: 'progresso' }
 ];
 const TELAS = [...ABAS, ...EXTRAS];
 const ehExtra = (id) => EXTRAS.some((e) => e.id === id);
@@ -130,13 +132,14 @@ function renderizar() {
   const aba = TELAS.find((a) => a.id === abaAtual);
   const y = window.scrollY;
   conteudo.innerHTML = aba.tela.render();
+  const abaMenu = aba.pai || abaAtual; // a tela de Estatísticas acende a aba Progresso
   document.querySelectorAll('.nav-btn').forEach((b) => {
-    const ativo = b.dataset.aba === abaAtual;
+    const ativo = b.dataset.aba === abaMenu;
     b.classList.toggle('ativo', ativo);
     if (ativo) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
   const cb = document.querySelector('.conta-btn');
-  if (cb) cb.classList.toggle('ativo', ehExtra(abaAtual));
+  if (cb) cb.classList.toggle('ativo', abaAtual === 'conta' || abaAtual === 'config');
   window.scrollTo(0, y);
 }
 

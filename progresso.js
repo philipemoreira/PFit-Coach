@@ -10,9 +10,10 @@ import { grupoDoExercicio } from './exercicios-base.js';
 import { totaisDoDia } from './alimentos.js';
 import { abrirFotos } from './fotos.js';
 import { cumprimento as cumprimentoPlano } from './dietaplano.js';
-import { volumeSessao, volumeDoDia, metaVolume, metaPeso, sequenciaSemanas, formatarVolume, conquistas, metaMacros } from './metricas.js';
+import { volumeSessao, volumeDoDia, metaVolume, metaPeso, sequenciaSemanas, formatarVolume, conquistas, metaMacros, textoProgresso, percentualConquista } from './metricas.js';
 
 let exercicioEscolhido = '';
+let conquistasTodas = false; // mostra todas as conquistas em andamento
 let mesVisto = null; // primeiro dia do mês mostrado no calendário
 const norm = (s) => String(s || '').trim().toLowerCase();
 
@@ -124,7 +125,8 @@ function blocoVolume() {
     ${dias.some((x) => x.v > 0)
     ? `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Volume dos últimos 14 dias">${linhaMeta}${barras}</svg>`
     : '<p class="mudo vazio-grafico">Quando você terminar um treino com carga e repetições, as barras aparecem aqui.</p>'}
-    <p class="mudo peq">Últimos 14 dias.${meta ? ` Linha tracejada = meta de ${formatarVolume(meta)} por dia; barras acesas bateram a meta.` : ' Defina uma meta no Perfil para ver a linha.'}</p>
+    <button class="btn secundario cheio" type="button" data-acao="stats-abrir">Estatísticas completas ›</button>
+    <p class="mudo peq">Últimos 14 dias.${meta ? ` Linha tracejada = meta de ${formatarVolume(meta)} por dia; barras acesas bateram a meta.` : ' Defina uma meta em Configurações para ver a linha.'}</p>
   </section>`;
 }
 
@@ -156,7 +158,7 @@ function blocoCalorias() {
     ${comDado.length
     ? `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Calorias dos últimos 7 dias">${meta ? `<line x1="0" x2="${W}" y1="${yMeta}" y2="${yMeta}" class="g-tracejado"/>` : ''}${barras}</svg>`
     : '<p class="mudo vazio-grafico">Anote o que você comeu na aba Hoje e o gráfico aparece aqui.</p>'}
-    <p class="mudo peq">Últimos 7 dias.${meta ? ` Linha tracejada = meta de ${meta.toLocaleString('pt-BR')} kcal.` : ' Defina uma meta no Perfil para ver a linha.'}</p>
+    <p class="mudo peq">Últimos 7 dias.${meta ? ` Linha tracejada = meta de ${meta.toLocaleString('pt-BR')} kcal.` : ' Defina uma meta em Configurações para ver a linha.'}</p>
   </section>`;
 }
 
@@ -265,15 +267,37 @@ function blocoMedidas() {
   </section>`;
 }
 
+function barraConquista(c, grande = false) {
+  const pct = percentualConquista(c);
+  return `<span class="conq-trilho ${grande ? 'grande' : ''}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.floor(pct)}" aria-label="Progresso: ${escaparHtml(c.nome)}"><i style="width:${pct.toFixed(1)}%"></i></span>`;
+}
+
+function linhaConquista(c) {
+  const pct = Math.floor(percentualConquista(c));
+  return `<button type="button" class="conq-lin" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}">
+    <span class="conq-ico" aria-hidden="true">${c.icone}</span>
+    <span class="conq-corpo">
+      <b>${escaparHtml(c.nome)}</b>
+      ${c.atual === null ? `<small class="mudo">${escaparHtml(c.desc)}</small>` : `${barraConquista(c)}<span class="conq-cont"><span>${escaparHtml(textoProgresso(c))}</span><em>${pct}%</em></span>`}
+    </span>
+  </button>`;
+}
+
 function blocoConquistas() {
   const lista = conquistas();
-  const feitas = lista.filter((c) => c.ok).length;
+  const feitas = lista.filter((c) => c.ok);
+  const faltam = lista.filter((c) => !c.ok).sort((a, b) => percentualConquista(b) - percentualConquista(a));
+  const visiveis = conquistasTodas ? faltam : faltam.slice(0, 5);
   return `
-  <section class="card">
-    <div class="card-topo"><h2>Conquistas</h2><span class="selo">${feitas} de ${lista.length}</span></div>
+  <section class="card larga">
+    <div class="card-topo"><h2>Conquistas</h2><span class="selo">${feitas.length} de ${lista.length}</span></div>
+    ${faltam.length ? `<h3 class="sub">Em andamento</h3>
+    <div class="conq-lista">${visiveis.map(linhaConquista).join('')}</div>
+    ${faltam.length > 5 ? `<button class="btn secundario cheio" type="button" data-acao="conquistas-todas">${conquistasTodas ? 'Mostrar só as mais próximas' : `Ver todas as ${faltam.length} em andamento`}</button>` : ''}` : '<p class="mudo">Você conquistou tudo! 🏆</p>'}
+    ${feitas.length ? `<h3 class="sub">Conquistadas</h3>
     <div class="conquistas">
-      ${lista.map((c) => `<button type="button" class="conquista ${c.ok ? 'ok' : ''}" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}" data-d="${escaparHtml(c.desc)}" data-ok="${c.ok ? '1' : '0'}" aria-label="${escaparHtml(c.nome)}: ${c.ok ? 'conquistada' : 'bloqueada'}"><span aria-hidden="true">${c.icone}</span><small>${escaparHtml(c.nome)}</small></button>`).join('')}
-    </div>
+      ${feitas.map((c) => `<button type="button" class="conquista ok" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}" aria-label="${escaparHtml(c.nome)}: conquistada"><span aria-hidden="true">${c.icone}</span><small>${escaparHtml(c.nome)}</small></button>`).join('')}
+    </div>` : ''}
   </section>`;
 }
 
@@ -334,9 +358,12 @@ export const progresso = {
   },
   acoes: {
     'fotos-abrir': () => abrirFotos({ uid: estado.uid, dono: true }),
+    'conquistas-todas': () => { conquistasTodas = !conquistasTodas; nav.renderizar(); },
     'conquista-ver': (el) => {
-      const ok = el.dataset.ok === '1';
-      abrirFolha(`<h2>${escaparHtml(el.dataset.n)}</h2><p>${ok ? '✅ Conquistada!' : '🔒 Ainda não.'}</p><p class="mudo">${escaparHtml(el.dataset.d)}</p><button class="btn cheio" type="button" data-fechar>Fechar</button>`);
+      const c = conquistas().find((x) => x.nome === el.dataset.n);
+      if (!c) return;
+      const prog = c.ok ? '' : (c.atual === null ? '' : `${barraConquista(c, true)}<p class="conq-cont grande-cont"><span>${escaparHtml(textoProgresso(c))}</span><em>${Math.floor(percentualConquista(c))}%</em></p>`);
+      abrirFolha(`<div class="conq-folha"><span class="conq-folha-ico ${c.ok ? 'ok' : ''}" aria-hidden="true">${c.icone}</span><h2>${escaparHtml(c.nome)}</h2><p>${c.ok ? '✅ Conquistada!' : '🔒 Ainda não.'}</p><p class="mudo">${escaparHtml(c.desc)}</p>${prog}</div><button class="btn cheio" type="button" data-fechar>Fechar</button>`);
     },
     'medidas-novo': () => {
       const ultimo = [...estado.medidas].sort((a, b) => String(b.data).localeCompare(String(a.data)))[0] || {};
