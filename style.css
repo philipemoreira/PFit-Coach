@@ -1223,3 +1223,6 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 .conq-lin.feita { background: var(--selo-bg); border-color: var(--destaque); }
 .conq-lin.feita .conq-ico { background: rgba(198, 244, 50, .18); }
 .conq-check { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--destaque); color: var(--card); font-weight: 900; font-size: 14px; }
+
+/* v30: Hoje sem o cartão 'treinos na semana' — o treino ocupa a linha toda */
+.bento { grid-template-columns: 1fr !important; }

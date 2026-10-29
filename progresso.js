@@ -353,7 +353,7 @@ const secao = (titulo, sub = '') => `<div class="prog-sec"><h2>${titulo}</h2>${s
 export const progresso = {
   render() {
     return `<div class="prog-compacto">
-    <header class="topo topo-prog"><h1>Progresso</h1><button class="btn pequeno secundario" type="button" data-acao="stats-abrir">Estatísticas ›</button></header>
+    <header class="topo topo-prog"><h1>Progresso</h1></header>
     ${blocoResumo()}
     ${secao('Treinos')}
     <div class="grade-cards">${blocoCalendario()}${blocoVolume()}</div>

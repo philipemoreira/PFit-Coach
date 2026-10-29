@@ -88,16 +88,6 @@ function blocoHero() {
   </article>`;
 }
 
-function blocoTiles() {
-  const semana = dataLocal(segundaDaSemana());
-  const treinosSemana = estado.sessoes.filter((s) => s.data >= semana).length;
-  return `
-  <article class="tile">
-    <span class="numero">${treinosSemana}</span>
-    <span class="rotulo">treino${treinosSemana === 1 ? '' : 's'} na semana</span>
-  </article>`;
-}
-
 function barra(valor, meta) {
   const pct = meta ? Math.min(100, (valor / meta) * 100) : 0;
   return `<div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="${meta || 0}" aria-valuenow="${Math.round(valor)}"><i style="width:${pct.toFixed(1)}%"></i></div>`;
@@ -143,7 +133,6 @@ export const hoje = {
     ${faixaSemana()}
     <section class="bento">
       ${blocoHero()}
-      ${blocoTiles()}
     </section>
     <div class="grade-cards">${blocoVolumeHoje()}${blocoAgua()}${dietaLiberada() ? blocoMacros() : ''}${blocoRecadosHoje()}</div>`;
   },
