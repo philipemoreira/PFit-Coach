@@ -4,12 +4,11 @@ import { abrirFolha, confirmar } from './folha.js';
 import { escaparHtml, dataLocal, formatarDataLonga, segundaDaSemana } from './util.js';
 import { salvarDoc } from './dados.js';
 import { rascunhoSalvo, retomarTreino, descartarRascunho } from './treinar.js';
-import { blocoRegistro, planoDaDieta } from './dieta.js';
-import { analisarDia } from './dietaplano.js';
+import { avisoPassou } from './dieta.js';
 import { dietaLiberada } from './estado.js';
 import { nav } from './nav.js';
 import { blocoRecadosHoje } from './recados.js';
-import { blocoMacros, itensDoDia } from './alimentos.js';
+import { blocoMacros } from './alimentos.js';
 import { avisoAssinatura } from './assinatura.js';
 import { volumeDoDia, metaVolume, metaAgua, aguaDoDia, sequenciaSemanas, formatarVolume } from './metricas.js';
 
@@ -68,44 +67,31 @@ function blocoHero() {
     </article>`;
   }
 
+  const feitoTodos = doDia.length > 0 && doDia.every((t) => feitos.has(t.id));
+  const treinouHoje = feitos.size > 0;
   const itens = doDia.map((t) => `
-    <div class="treino-dia">
+    <div class="treino-dia ${feitos.has(t.id) ? 'ok' : ''}">
       <div>
         <strong>${escaparHtml(t.nome)}</strong>
         <p>${(t.exercicios || []).length} exercício${(t.exercicios || []).length === 1 ? '' : 's'}${feitos.has(t.id) ? ' · <span class="ok-txt">feito hoje ✔</span>' : ''}</p>
       </div>
-      <button class="btn pequeno escuro" type="button" data-acao="treino-iniciar" data-id="${escaparHtml(t.id)}">${feitos.has(t.id) ? 'Repetir' : 'Iniciar'}</button>
+      <button class="btn pequeno ${feitos.has(t.id) ? 'secundario' : 'escuro'}" type="button" data-acao="treino-iniciar" data-id="${escaparHtml(t.id)}">${feitos.has(t.id) ? 'Repetir' : 'Iniciar'}</button>
     </div>`).join('');
+  const livre = !doDia.length ? (treinouHoje ? '<h2>Você treinou hoje ✔</h2><p>Treino feito. Bom descanso!</p>' : '<h2>Dia livre</h2><p>Nenhum treino marcado para hoje.</p>') : '';
 
   return `
-  <article class="hero-treino">
-    <span class="rotulo-hero">Treino de hoje</span>
-    ${itens || '<h2>Dia livre</h2><p>Nenhum treino marcado para hoje.</p>'}
-    <button class="link" type="button" data-acao="treino-outro">${doDia.length ? 'Treinar outro treino' : 'Escolher um treino para fazer agora'}</button>
+  <article class="hero-treino ${feitoTodos || (!doDia.length && treinouHoje) ? 'feito' : ''}">
+    <span class="rotulo-hero">${feitoTodos || (!doDia.length && treinouHoje) ? '✔ Treino de hoje feito' : 'Treino de hoje'}</span>
+    ${feitoTodos ? '<h2 class="feito-tit">Treino feito! 💪</h2>' : ''}
+    ${itens || livre}
+    <button class="link" type="button" data-acao="treino-outro">${doDia.length ? (feitoTodos ? 'Fazer outro treino' : 'Treinar outro treino') : 'Escolher um treino para fazer agora'}</button>
   </article>`;
 }
 
 function blocoTiles() {
-  const dia = analisarDia(planoDaDieta(), itensDoDia());
-  const feitas = dia.feitos;
-  const pct = dia.total ? feitas / dia.total : 0;
-  const CIRC = 2 * Math.PI * 37;
   const semana = dataLocal(segundaDaSemana());
   const treinosSemana = estado.sessoes.filter((s) => s.data >= semana).length;
-  const tileDieta = dietaLiberada() ? `
-  <article class="tile">
-    <div class="anel" role="img" aria-label="Dieta de hoje: ${feitas} de ${dia.total} itens">
-      <svg viewBox="0 0 92 92"><circle class="fundo" cx="46" cy="46" r="37"/><circle class="valor" cx="46" cy="46" r="37" stroke-dasharray="${(pct * CIRC).toFixed(1)} ${CIRC.toFixed(1)}"/></svg>
-      <b>${feitas}/${dia.total}</b>
-    </div>
-    <span class="rotulo">Dieta de hoje</span>
-  </article>` : `
-  <article class="tile tile-trancado" aria-label="Dieta bloqueada: precisa de um personal">
-    <svg class="cadeado-grande" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
-    <span class="rotulo">Dieta<br>com seu personal</span>
-  </article>`;
   return `
-  ${tileDieta}
   <article class="tile">
     <span class="numero">${treinosSemana}</span>
     <span class="rotulo">treino${treinosSemana === 1 ? '' : 's'} na semana</span>
@@ -149,6 +135,7 @@ export const hoje = {
       <h1>Olá${nome ? ', ' + escaparHtml(nome) : ''}</h1>
     </header>
     ${avisoAssinatura()}
+    ${dietaLiberada() ? avisoPassou() : ''}
     ${blocoRascunho()}
     ${faixaSemana()}
     <section class="bento">
@@ -156,8 +143,7 @@ export const hoje = {
       ${blocoTiles()}
     </section>
     ${blocoDia()}
-    <div class="grade-cards">${dietaLiberada() ? blocoMacros() : ''}${blocoRecadosHoje()}</div>
-    ${dietaLiberada() ? blocoRegistro() : ''}`;
+    <div class="grade-cards">${dietaLiberada() ? blocoMacros() : ''}${blocoRecadosHoje()}</div>`;
   },
   acoes: {
     'agua-mais': () => { const d = dataLocal(); salvarDoc(estado.uid, 'agua', d, { data: d, ml: aguaDoDia(d) + 250 }); },
