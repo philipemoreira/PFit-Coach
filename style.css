@@ -1120,3 +1120,38 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 .conq-folha-ico { display: grid; place-items: center; width: 84px; height: 84px; margin: 0 auto 6px; border-radius: 26px; background: var(--card2); font-size: 44px; filter: grayscale(1); opacity: .6; }
 .conq-folha-ico.ok { filter: none; opacity: 1; background: var(--selo-bg); }
 @media (min-width: 900px) { .conq-lista { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---------- Progresso: seções e cartões alinhados ---------- */
+.topo-prog { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.prog-sec { display: flex; align-items: baseline; gap: 12px; margin: 30px 0 12px; }
+.prog-sec h2 { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: var(--mudo); }
+.prog-sec::after { content: ""; flex: 1; height: 1px; background: var(--borda); align-self: center; }
+.prog-sec span { order: 3; font-size: 12px; color: var(--mudo); }
+.cal-card .cal-graf .vazio-grafico { min-height: 80px; }
+.grade-cards { margin-bottom: 0; }
+.grade-cards > .card { margin-bottom: 14px; }
+@media (min-width: 900px) {
+  .grade-cards.inicio { align-items: start; }
+  .cal-card { display: grid !important; grid-template-columns: minmax(220px, 1fr) 1.6fr; gap: 28px; align-items: center; }
+  .cal-card .grafico { max-height: 190px; }
+  .prog-sec { margin-top: 36px; }
+}
+.cal-card .cal-info .campo { margin: 8px 0; }
+.cal-card .cal-graf { min-width: 0; }
+.grade-cards > .card.larga + .card.larga { margin-top: 0; }
+@media (max-width: 899px) { .cal-card .cal-graf { margin-top: 6px; } }
+@media (min-width: 900px) {
+  .grade-cards.corpo .peso-card { grid-row: span 2; }
+}
+.prog-sec span { order: 3; font-weight: 800; color: var(--destaque); background: var(--selo-bg); padding: 3px 10px; border-radius: 999px; }
+
+/* ---------- Listas recolhíveis (celular: mostra só as primeiras; computador: mostra tudo) ---------- */
+.recolhivel .rc-btn { margin-top: 8px; }
+.recolhivel .rc-menos { display: none; }
+.recolhivel.aberta .rc-mais { display: none; }
+.recolhivel.aberta .rc-menos { display: inline; }
+@media (max-width: 899px) {
+  .recolhivel:not(.aberta) .rc-extra { display: none; }
+  .recolhivel:not(.aberta) > :first-child > :nth-last-child(1 of :not(.rc-extra)) { border-bottom: 0; }
+}
+@media (min-width: 900px) { .recolhivel .rc-btn { display: none; } }

@@ -17,6 +17,7 @@ import { abrirBoasVindas } from './ajuda.js';
 import { abrirOnboarding } from './onboarding.js';
 import { treinoAberto } from './treinar.js';
 import { aplicarTema } from './tema.js';
+import { acoesRecolhivel } from './recolhivel.js';
 
 aplicarTema();
 const app = document.getElementById('app');
@@ -45,7 +46,7 @@ const TELAS = [...ABAS, ...EXTRAS];
 const ehExtra = (id) => EXTRAS.some((e) => e.id === id);
 
 // Todas as ações e formulários das telas num lugar só.
-const ACOES = { ...acoesAuth, ...acoesRecados };
+const ACOES = { ...acoesAuth, ...acoesRecados, ...acoesRecolhivel };
 const MUDANCAS = {};
 TELAS.forEach(({ tela }) => {
   Object.assign(ACOES, tela.acoes || {});

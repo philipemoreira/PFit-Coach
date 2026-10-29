@@ -14,6 +14,7 @@ import { volumeSessao, formatarVolume } from './metricas.js';
 import { nav } from './nav.js';
 import { totais } from './alimentos.js';
 import { avisoFaixa } from './assinatura.js';
+import { listaRecolhivel } from './recolhivel.js';
 import { resumoAnamnese } from './onboarding.js';
 import { abrirFotos } from './fotos.js';
 
@@ -202,7 +203,7 @@ function cartaoModelos() {
   <section class="card">
     <div class="card-topo"><h2>Modelos de treino</h2><button class="btn pequeno" type="button" data-acao="p-modelo-novo">+ Novo</button></div>
     <p class="mudo peq">Treinos prontos que você aplica em qualquer aluno com um toque.</p>
-    ${lista.length ? `<div class="lista">${lista.map((m) => `<button type="button" class="regra-linha" data-acao="p-modelo-editar" data-id="${escaparHtml(m.id)}"><span>${escaparHtml(m.nome)}<br><small class="mudo">${(m.exercicios || []).length} exercício${(m.exercicios || []).length === 1 ? '' : 's'}</small></span><span class="seta" aria-hidden="true">›</span></button>`).join('')}</div>` : '<p class="mudo vazio-peq">Nenhum modelo ainda.</p>'}
+    ${lista.length ? listaRecolhivel('modelos', lista.map((m) => `<button type="button" class="regra-linha" data-acao="p-modelo-editar" data-id="${escaparHtml(m.id)}"><span>${escaparHtml(m.nome)}<br><small class="mudo">${(m.exercicios || []).length} exercício${(m.exercicios || []).length === 1 ? '' : 's'}</small></span><span class="seta" aria-hidden="true">›</span></button>`)) : '<p class="mudo vazio-peq">Nenhum modelo ainda.</p>'}
   </section>`;
 }
 
@@ -277,11 +278,11 @@ function detalhe(v) {
   <div class="grade-cards">
     <section class="card">
       <div class="card-topo"><h2>Treinos dele</h2><button class="btn pequeno" type="button" data-acao="p-treino-novo">+ Novo</button></div>
-      ${dados.treinos.length ? `<div class="lista">${dados.treinos.map((t) => `
+      ${dados.treinos.length ? listaRecolhivel('p-treinos', dados.treinos.map((t) => `
         <div class="linha-treino-aluno">
           <button type="button" class="regra-linha" data-acao="p-treino-editar" data-id="${escaparHtml(t.id)}"><span>${escaparHtml(t.nome)}<br><small class="mudo">${(t.exercicios || []).length} exercício${(t.exercicios || []).length === 1 ? '' : 's'}${(t.dias || []).length ? ' · ' + ORDEM_DIAS.filter((d) => t.dias.includes(d)).map((d) => DIAS_CURTOS[d]).join(' ') : ''}</small></span><span class="seta" aria-hidden="true">›</span></button>
           <button type="button" class="icone-peq" data-acao="p-treino-modelo" data-id="${escaparHtml(t.id)}" title="Salvar como modelo" aria-label="Salvar ${escaparHtml(t.nome)} como modelo">⧉</button>
-        </div>`).join('')}</div>` : '<p class="mudo vazio-peq">Nenhum treino ainda.</p>'}
+        </div>`)) : '<p class="mudo vazio-peq">Nenhum treino ainda.</p>'}
       <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="p-treino-modelo-usar">Usar um modelo</button></div>
     </section>
     <section class="card">
@@ -318,9 +319,9 @@ function detalhe(v) {
   </div>
   <section class="card">
     <h2>Últimos treinos dele</h2>
-    ${sess.length ? `<div class="lista">${sess.slice(0, 10).map((s) => `<button type="button" class="regra-linha" data-acao="p-aluno-sessao" data-id="${escaparHtml(s.id)}">
+    ${sess.length ? listaRecolhivel('p-sessoes', sess.slice(0, 10).map((s) => `<button type="button" class="regra-linha" data-acao="p-aluno-sessao" data-id="${escaparHtml(s.id)}">
       <small class="hora">${formatarDataCurta(s.data)}</small>
-      <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${s.duracaoMin ? s.duracaoMin + ' min · ' : ''}${Math.round(volumeSessao(s)).toLocaleString('pt-BR')} kg${(s.recordes || []).length ? ' · 🏆' : ''}${s.nota ? ' · 💬 tem anotação' : ''}</small></span><span class="seta" aria-hidden="true">›</span></button>`).join('')}</div>` : '<p class="mudo">Nenhum treino feito ainda.</p>'}
+      <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${s.duracaoMin ? s.duracaoMin + ' min · ' : ''}${Math.round(volumeSessao(s)).toLocaleString('pt-BR')} kg${(s.recordes || []).length ? ' · 🏆' : ''}${s.nota ? ' · 💬 tem anotação' : ''}</small></span><span class="seta" aria-hidden="true">›</span></button>`)) : '<p class="mudo">Nenhum treino feito ainda.</p>'}
   </section>
   <button class="btn perigo-claro cheio" type="button" data-acao="p-aluno-remover">Remover este aluno</button>`;
 }

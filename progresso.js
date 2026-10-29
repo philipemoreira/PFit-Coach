@@ -10,6 +10,7 @@ import { grupoDoExercicio } from './exercicios-base.js';
 import { totaisDoDia } from './alimentos.js';
 import { abrirFotos } from './fotos.js';
 import { cumprimento as cumprimentoPlano } from './dietaplano.js';
+import { listaRecolhivel } from './recolhivel.js';
 import { volumeSessao, volumeDoDia, metaVolume, metaPeso, sequenciaSemanas, formatarVolume, conquistas, metaMacros, textoProgresso, percentualConquista } from './metricas.js';
 
 let exercicioEscolhido = '';
@@ -152,13 +153,15 @@ function blocoCalorias() {
   const comDado = dias.filter((d) => d.v > 0);
   const media = comDado.length ? Math.round(comDado.reduce((n, d) => n + d.v, 0) / comDado.length) : 0;
   return `
-  <section class="card">
-    <h2>Calorias</h2>
-    <p class="grande">${media.toLocaleString('pt-BR')} <small>kcal por dia (média)</small></p>
-    ${comDado.length
+  <section class="card larga cal-card">
+    <div class="cal-info">
+      <h2>Calorias</h2>
+      <p class="grande">${media.toLocaleString('pt-BR')} <small>kcal por dia (média)</small></p>
+      <p class="mudo peq">Últimos 7 dias.${meta ? ` Linha tracejada = meta de ${meta.toLocaleString('pt-BR')} kcal.` : ' Defina uma meta em Configurações para ver a linha.'}</p>
+    </div>
+    <div class="cal-graf">${comDado.length
     ? `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Calorias dos últimos 7 dias">${meta ? `<line x1="0" x2="${W}" y1="${yMeta}" y2="${yMeta}" class="g-tracejado"/>` : ''}${barras}</svg>`
-    : '<p class="mudo vazio-grafico">Anote o que você comeu na aba Hoje e o gráfico aparece aqui.</p>'}
-    <p class="mudo peq">Últimos 7 dias.${meta ? ` Linha tracejada = meta de ${meta.toLocaleString('pt-BR')} kcal.` : ' Defina uma meta em Configurações para ver a linha.'}</p>
+    : '<p class="mudo vazio-grafico">Anote o que você comeu na aba Dieta e o gráfico aparece aqui.</p>'}</div>
   </section>`;
 }
 
@@ -173,7 +176,7 @@ function blocoGrupos() {
   const lista = Object.entries(cont).sort((a, b) => b[1] - a[1]);
   const max = Math.max(1, ...lista.map((x) => x[1]));
   return `
-  <section class="card">
+  <section class="card larga">
     <h2>Séries por músculo na semana</h2>
     ${lista.length
     ? lista.map(([g, n]) => `<div class="linha-barra"><span>${escaparHtml(g)}</span><div class="barra peq"><i style="width:${Math.round((n / max) * 100)}%"></i></div><strong>${n}</strong></div>`).join('')
@@ -183,7 +186,7 @@ function blocoGrupos() {
 
 function blocoFotos() {
   return `
-  <section class="card larga">
+  <section class="card">
     <div class="card-topo"><h2>Fotos do corpo</h2><button class="btn pequeno" type="button" data-acao="fotos-abrir">Abrir</button></div>
     <p class="mudo peq">Guarde fotos para comparar antes e depois. Só você vê, a não ser que escolha compartilhar com seu personal.</p>
   </section>`;
@@ -229,18 +232,18 @@ function blocoPeso() {
   const ultimo = asc[asc.length - 1];
   const primeiro = asc[0];
   const dif = ultimo && primeiro && asc.length > 1 ? ultimo.kg - primeiro.kg : null;
-  const lista = [...asc].reverse().slice(0, 6).map((p) => `
+  const lista = [...asc].reverse().slice(0, 12).map((p) => `
     <div class="linha-peso"><span>${formatarDataCurta(p.data)}</span><strong>${formatarNumero(p.kg)} kg</strong>
-    <button type="button" class="icone-peq" data-acao="peso-excluir" data-id="${escaparHtml(p.id)}" aria-label="Apagar peso de ${formatarDataCurta(p.data)}">✕</button></div>`).join('');
+    <button type="button" class="icone-peq" data-acao="peso-excluir" data-id="${escaparHtml(p.id)}" aria-label="Apagar peso de ${formatarDataCurta(p.data)}">✕</button></div>`);
   return `
-  <section class="card">
+  <section class="card peso-card">
     <div class="card-topo"><h2>Peso corporal</h2><button class="btn pequeno" type="button" data-acao="peso-novo">+ Registrar</button></div>
     ${ultimo ? `<p class="grande">${formatarNumero(ultimo.kg)} <small>kg</small></p>
       ${dif !== null ? `<p class="mudo peq">${dif > 0 ? '+' : ''}${formatarNumero(dif)} kg desde o primeiro registro</p>` : ''}
       ${metaPeso() ? `<p class="mudo peq">Meta: <strong>${formatarNumero(metaPeso())} kg</strong> · ${Math.abs(ultimo.kg - metaPeso()) < 0.05 ? 'meta atingida 🎉' : `faltam ${formatarNumero(Math.abs(ultimo.kg - metaPeso()))} kg`}</p>` : ''}`
       : '<p class="mudo vazio-grafico">Nenhum peso registrado ainda.<br>Toque em “+ Registrar” para começar.</p>'}
     ${grafico(asc.slice(-30).map((p) => ({ rot: formatarDataCurta(p.data), v: p.kg })), 'kg') || (asc.length === 1 ? '<p class="mudo peq">Registre de novo outro dia para ver o gráfico.</p>' : '')}
-    ${lista ? `<div class="lista-peso">${lista}</div>` : ''}
+    ${lista.length ? listaRecolhivel('peso', lista, { visiveis: 3, classe: 'lista-peso' }) : ''}
   </section>`;
 }
 
@@ -256,11 +259,11 @@ function blocoMedidas() {
     const ant = com.length > 1 ? com[com.length - 2] : null;
     const dif = ant ? atual[k] - ant[k] : null;
     return `<div class="linha-medida"><span>${nome}</span><strong>${formatarNumero(atual[k])} cm</strong><small class="mudo">${dif === null ? '' : `${dif > 0 ? '+' : ''}${formatarNumero(dif)}`}</small></div>`;
-  }).join('');
+  }).filter(Boolean);
   return `
   <section class="card">
     <div class="card-topo"><h2>Medidas do corpo</h2><button class="btn pequeno" type="button" data-acao="medidas-novo">+ Registrar</button></div>
-    ${linhas ? `<div class="lista-medidas">${linhas}</div>
+    ${linhas.length ? `${listaRecolhivel('medidas', linhas, { visiveis: 4, classe: 'lista-medidas' })}
       <p class="mudo peq">Último registro: ${formatarDataCurta(ultimaData)}. O número pequeno é a diferença para o registro anterior.</p>
       <div class="acoes-card"><button class="link" type="button" data-acao="medidas-historico">Ver registros</button></div>`
       : '<p class="mudo vazio-grafico">Peito, cintura, quadril, braço, coxa e panturrilha.<br>Toque em “+ Registrar” para começar.</p>'}
@@ -283,17 +286,18 @@ function linhaConquista(c) {
   </button>`;
 }
 
+const textoContagemConquistas = () => { const l = conquistas(); return `${l.filter((c) => c.ok).length} de ${l.length}`; };
+
 function blocoConquistas() {
   const lista = conquistas();
   const feitas = lista.filter((c) => c.ok);
   const faltam = lista.filter((c) => !c.ok).sort((a, b) => percentualConquista(b) - percentualConquista(a));
-  const visiveis = conquistasTodas ? faltam : faltam.slice(0, 5);
+  const visiveis = conquistasTodas ? faltam : faltam.slice(0, 4);
   return `
   <section class="card larga">
-    <div class="card-topo"><h2>Conquistas</h2><span class="selo">${feitas.length} de ${lista.length}</span></div>
     ${faltam.length ? `<h3 class="sub">Em andamento</h3>
     <div class="conq-lista">${visiveis.map(linhaConquista).join('')}</div>
-    ${faltam.length > 5 ? `<button class="btn secundario cheio" type="button" data-acao="conquistas-todas">${conquistasTodas ? 'Mostrar só as mais próximas' : `Ver todas as ${faltam.length} em andamento`}</button>` : ''}` : '<p class="mudo">Você conquistou tudo! 🏆</p>'}
+    ${faltam.length > 4 ? `<button class="btn secundario cheio" type="button" data-acao="conquistas-todas">${conquistasTodas ? 'Mostrar menos' : `Ver mais (${faltam.length - 4})`}</button>` : ''}` : '<p class="mudo">Você conquistou tudo! 🏆</p>'}
     ${feitas.length ? `<h3 class="sub">Conquistadas</h3>
     <div class="conquistas">
       ${feitas.map((c) => `<button type="button" class="conquista ok" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}" aria-label="${escaparHtml(c.nome)}: conquistada"><span aria-hidden="true">${c.icone}</span><small>${escaparHtml(c.nome)}</small></button>`).join('')}
@@ -304,22 +308,24 @@ function blocoConquistas() {
 function blocoExercicio() {
   const lista = exerciciosComCarga();
   if (!lista.length) {
-    return `<section class="card"><h2>Carga por exercício</h2><p class="mudo vazio-grafico">Quando você terminar treinos com carga marcada, a evolução de cada exercício aparece aqui.</p></section>`;
+    return `<section class="card larga"><h2>Carga por exercício</h2><p class="mudo vazio-grafico">Quando você terminar treinos com carga marcada, a evolução de cada exercício aparece aqui.</p></section>`;
   }
   if (!lista.some(([k]) => k === exercicioEscolhido)) exercicioEscolhido = lista[0][0];
   const pontos = pontosExercicio(exercicioEscolhido);
   const melhor = pontos.length ? Math.max(...pontos.map((p) => p.v)) : null;
   const ultimo = pontos.length ? pontos[pontos.length - 1].v : null;
   return `
-  <section class="card">
-    <h2>Carga por exercício</h2>
-    <label class="campo sem-margem">
-      <select class="in" data-mudar="prog-exercicio" aria-label="Escolha o exercício">
-        ${lista.map(([k, nome]) => `<option value="${escaparHtml(k)}" ${k === exercicioEscolhido ? 'selected' : ''}>${escaparHtml(nome)}</option>`).join('')}
-      </select>
-    </label>
-    <p class="mudo peq">Maior carga de cada treino. Melhor: <strong>${formatarNumero(melhor)} kg</strong> · Último: <strong>${formatarNumero(ultimo)} kg</strong></p>
-    ${grafico(pontos, 'kg') || '<p class="mudo peq">Faça esse exercício em mais um treino para ver o gráfico.</p>'}
+  <section class="card larga cal-card">
+    <div class="cal-info">
+      <h2>Carga por exercício</h2>
+      <label class="campo sem-margem">
+        <select class="in" data-mudar="prog-exercicio" aria-label="Escolha o exercício">
+          ${lista.map(([k, nome]) => `<option value="${escaparHtml(k)}" ${k === exercicioEscolhido ? 'selected' : ''}>${escaparHtml(nome)}</option>`).join('')}
+        </select>
+      </label>
+      <p class="mudo peq">Maior carga de cada treino. Melhor: <strong>${formatarNumero(melhor)} kg</strong> · Último: <strong>${formatarNumero(ultimo)} kg</strong></p>
+    </div>
+    <div class="cal-graf">${grafico(pontos, 'kg') || '<p class="mudo peq">Faça esse exercício em mais um treino para ver o gráfico.</p>'}</div>
   </section>`;
 }
 
@@ -327,28 +333,38 @@ function blocoHistorico() {
   const lista = [...estado.sessoes]
     .sort((a, b) => String(b.fim || b.data).localeCompare(String(a.fim || a.data)))
     .slice(0, 10);
-  if (!lista.length) return `<section class="card"><h2>Histórico</h2><p class="mudo">Seus treinos feitos aparecem aqui.</p></section>`;
+  if (!lista.length) return `<section class="card"><p class="mudo">Seus treinos feitos aparecem aqui.</p></section>`;
   return `
   <section class="card">
-    <h2>Últimos treinos</h2>
-    <div class="lista">
-      ${lista.map((s) => {
+    ${listaRecolhivel('historico', lista.map((s) => {
         const feitas = (s.exercicios || []).reduce((n, e) => n + (e.series || []).filter((x) => x.feito).length, 0);
         const cardioMin = (s.exercicios || []).reduce((n, e) => n + (e.cardio && e.feito && e.minutos ? e.minutos : 0), 0);
         return `<button type="button" class="regra-linha" data-acao="sessao-ver" data-id="${escaparHtml(s.id)}">
           <small class="hora">${formatarDataCurta(s.data)}</small>
           <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${feitas || !cardioMin ? `${feitas} ${feitas === 1 ? 'série' : 'séries'}` : ''}${cardioMin ? `${feitas ? ' · ' : ''}cardio ${formatarNumero(cardioMin)} min` : ''}${s.duracaoMin ? ` · ${s.duracaoMin} min` : ''} ${volumeSessao(s) > 0 || !cardioMin ? ` · ${Math.round(volumeSessao(s)).toLocaleString('pt-BR')} kg` : ''}${(s.recordes || []).length ? ' · 🏆' : ''}</small></span>
           <span class="seta" aria-hidden="true">›</span></button>`;
-      }).join('')}
-    </div>
+      }))}
   </section>`;
 }
+
+const secao = (titulo, sub = '') => `<div class="prog-sec"><h2>${titulo}</h2>${sub ? `<span>${sub}</span>` : ''}</div>`;
 
 export const progresso = {
   render() {
     return `
-    <header class="topo"><h1>Progresso</h1></header>
-    ${blocoResumo()}<div class="grade-cards">${blocoCalendario()}${blocoVolume()}${blocoGrupos()}${blocoCalorias()}${blocoPeso()}${blocoMedidas()}${blocoFotos()}${blocoExercicio()}${blocoConquistas()}</div>${blocoHistorico()}`;
+    <header class="topo topo-prog"><h1>Progresso</h1><button class="btn pequeno secundario" type="button" data-acao="stats-abrir">Estatísticas ›</button></header>
+    ${blocoResumo()}
+    ${secao('Treinos')}
+    <div class="grade-cards">${blocoCalendario()}${blocoVolume()}</div>
+    <div class="grade-cards">${blocoGrupos()}${blocoExercicio()}</div>
+    ${secao('Corpo')}
+    <div class="grade-cards corpo">${blocoPeso()}${blocoMedidas()}${blocoFotos()}</div>
+    ${secao('Alimentação')}
+    <div class="grade-cards">${blocoCalorias()}</div>
+    ${secao('Conquistas', textoContagemConquistas())}
+    <div class="grade-cards">${blocoConquistas()}</div>
+    ${secao('Últimos treinos')}
+    ${blocoHistorico()}`;
   },
   mudancas: {
     'prog-exercicio': (el) => {

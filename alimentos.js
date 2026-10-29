@@ -5,6 +5,7 @@ import { escaparHtml, dataLocal, numero, formatarNumero, novoId, toast } from '.
 import { salvarDoc, removerDoc } from './dados.js';
 import { metaMacros } from './metricas.js';
 import { MOMENTOS, descreverItem } from './dietaplano.js';
+import { listaRecolhivel } from './recolhivel.js';
 
 export { MOMENTOS };
 
@@ -56,7 +57,7 @@ export function blocoAlimentos() {
   <section class="card larga">
     <div class="card-topo"><h2>Meus alimentos</h2><button class="btn pequeno" type="button" data-acao="alimento-novo">+ Novo</button></div>
     <p class="mudo peq">Alimentos com os valores de uma porção (veja no rótulo ou na sua tabela). Servem para preencher a lista da dieta e o “comi outra coisa” mais rápido.</p>
-    ${lista.length ? `<div class="lista">${lista.map((a) => `<button type="button" class="regra-linha" data-acao="alimento-editar" data-id="${escaparHtml(a.id)}"><span>${escaparHtml(a.nome)}<br><small class="mudo">${escaparHtml(a.porcao || '1 porção')} · ${formatarNumero(a.kcal)} kcal · P ${formatarNumero(a.prot)} · C ${formatarNumero(a.carb)} · G ${formatarNumero(a.gord)}</small></span><span class="seta" aria-hidden="true">›</span></button>`).join('')}</div>` : '<p class="mudo vazio-peq">Nenhum alimento ainda.</p>'}
+    ${lista.length ? listaRecolhivel('alimentos', lista.map((a) => `<button type="button" class="regra-linha" data-acao="alimento-editar" data-id="${escaparHtml(a.id)}"><span>${escaparHtml(a.nome)}<br><small class="mudo">${escaparHtml(a.porcao || '1 porção')} · ${formatarNumero(a.kcal)} kcal · P ${formatarNumero(a.prot)} · C ${formatarNumero(a.carb)} · G ${formatarNumero(a.gord)}</small></span><span class="seta" aria-hidden="true">›</span></button>`)) : '<p class="mudo vazio-peq">Nenhum alimento ainda.</p>'}
   </section>`;
 }
 
