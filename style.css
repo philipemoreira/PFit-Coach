@@ -1278,3 +1278,48 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 /* v36: nome da marca */
 .entrada-marca .marca-nome { display: block; font-family: var(--fonte-titulo); font-size: 22px; letter-spacing: -.5px; margin: 8px 0 14px; }
 .nav-marca b, .topbar-marca b { white-space: nowrap; }
+
+/* v37: editor de treino reorganizado + janela de escolha de exercício */
+.ed-card { background: var(--card2); border: 1px solid var(--borda); border-radius: 20px; padding: 14px; margin-bottom: 18px; }
+.ed-rot { display: block; margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--mudo); }
+.ed-rot small { font-weight: 500; opacity: .8; }
+.ed-rot2 { margin-top: 14px; }
+.ed-card .in { background: var(--card); }
+.ed-card .dias { margin-bottom: 6px; }
+.ed-cab { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 2px 2px; }
+.ed-cab h3 { font-size: 18px; margin: 0; }
+.ed-dica { margin: 0 2px 10px; }
+.ex-bloco { padding: 12px; border-radius: 18px; border-color: var(--borda); }
+.ex-nome { position: relative; flex: 1; min-width: 0; }
+.ex-nome .in { padding-right: 52px; font-weight: 700; }
+.ex-pick { position: absolute; right: 5px; top: 5px; width: 40px; height: 40px; border-radius: 12px; border: 0; background: var(--limao); color: var(--sobre-limao); display: grid; place-items: center; cursor: pointer; }
+.ex-pick svg { width: 20px; height: 20px; }
+.ex-mais { margin-top: 4px; }
+.ex-mais summary { cursor: pointer; list-style: none; font-size: 13px; font-weight: 700; color: var(--mudo); padding: 8px 2px; }
+.ex-mais summary::-webkit-details-marker { display: none; }
+.ex-mais summary::before { content: '+ '; color: var(--destaque); }
+.ex-mais[open] summary::before { content: '− '; }
+.ex-mais .in { margin-bottom: 6px; }
+.ex-bloco.cardio .ex-mais .so-forca { display: none; }
+#ex-lista.ordenando .ex-bloco .ex-mais { display: none; }
+.ed-rodape { position: sticky; bottom: -1px; background: var(--card); padding-top: 10px; }
+
+.folha-lib .in.lib-busca { margin-bottom: 12px; }
+.lib-grupos { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.lib-grupo { background: var(--card2); border: 1px solid var(--borda); border-radius: 16px; overflow: hidden; }
+.lib-cab { width: 100%; display: flex; align-items: center; gap: 10px; padding: 14px 14px; border: 0; background: none; color: var(--texto); font-size: 16px; font-weight: 800; text-align: left; cursor: pointer; }
+.lib-cab .lib-nome { flex: 1; }
+.lib-cab .lib-n { font-size: 12px; font-weight: 700; color: var(--mudo); background: var(--card); border-radius: 999px; padding: 3px 9px; }
+.lib-cab svg { width: 20px; height: 20px; color: var(--mudo); transition: transform .2s; }
+.lib-cab[aria-expanded="true"] svg { transform: rotate(180deg); }
+.lib-cab[aria-expanded="true"] { color: var(--destaque); }
+.lib-itens { display: flex; flex-direction: column; padding: 0 8px 8px; }
+.lib-itens[hidden], .lib-res[hidden], .lib-grupos[hidden] { display: none; }
+.lib-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; padding: 13px 12px; border: 0; border-radius: 12px; background: none; color: var(--texto); font-size: 15px; font-weight: 600; cursor: pointer; }
+.lib-item small { color: var(--mudo); font-size: 12px; font-weight: 600; }
+.lib-item:hover, .lib-item:active { background: var(--card); }
+.lib-res { display: flex; flex-direction: column; margin-bottom: 8px; }
+.lib-usar { color: var(--destaque); font-weight: 800; }
+.lib-dica { margin: 4px 2px 12px; }
+.ed-card .dias { flex-wrap: nowrap; gap: 5px; }
+.ed-card .dia-chip { min-width: 0; flex: 1; padding: 0; }

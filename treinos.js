@@ -7,7 +7,7 @@ import { iniciarTreino } from './treinar.js';
 import { abrirAnilhas } from './anilhas.js';
 import { nav } from './nav.js';
 import { lerVideo } from './video.js';
-import { todosOsNomes } from './exercicios-base.js';
+import { BASE, todosOsNomes, norm } from './exercicios-base.js';
 
 function chipsDias(dias = []) {
   if (!dias.length) return '';
@@ -40,13 +40,19 @@ function cardTreino(t) {
   </section>`;
 }
 
+const ICONE_LISTA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const ICONE_SETA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 function blocoExercicio(ex = {}) {
   const v = (x) => (x === null || x === undefined ? '' : escaparHtml(x));
   return `
   <div class="ex-bloco ${ex.cardio ? 'cardio' : ''}" data-ex data-id="${escaparHtml(ex.id || novoId())}">
     <div class="ex-topo">
       <button type="button" class="alca" data-drag aria-label="Segure e arraste para mudar a ordem" title="Segure e arraste para mudar a ordem"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></button>
-      <input class="in" data-f="nome" placeholder="Nome do exercício" list="lista-exercicios" value="${v(ex.nome)}" maxlength="80">
+      <div class="ex-nome">
+        <input class="in" data-f="nome" placeholder="Nome do exercício" value="${v(ex.nome)}" maxlength="80" autocomplete="off">
+        <button type="button" class="ex-pick" data-pick aria-label="Escolher da lista de exercícios" title="Escolher da lista">${ICONE_LISTA}</button>
+      </div>
       <div class="ex-mover">
         <button type="button" data-mv="del" aria-label="Remover exercício" title="Remover">✕</button>
       </div>
@@ -54,14 +60,70 @@ function blocoExercicio(ex = {}) {
     <label class="cardio-opcao"><input type="checkbox" data-f="cardio" ${ex.cardio ? 'checked' : ''}> Cardio (por tempo, sem séries)</label>
     <div class="so-cardio"><label>Minutos<input class="in" data-f="minutos" inputmode="numeric" value="${v(ex.minutos)}"></label></div>
     <div class="grade4">
-      <label>Séries<input class="in" data-f="series" inputmode="numeric" value="${v(ex.series)}"></label>
-      <label>Repetições<input class="in" data-f="reps" placeholder="10 ou 8-12" value="${v(ex.reps)}" maxlength="12"></label>
+      <label>Séries<input class="in" data-f="series" inputmode="numeric" placeholder="3" value="${v(ex.series)}"></label>
+      <label>Repetições<input class="in" data-f="reps" placeholder="8-12" value="${v(ex.reps)}" maxlength="12"></label>
       <label>Carga (kg)<input class="in" data-f="carga" inputmode="decimal" value="${v(ex.carga)}"></label>
-      <label>Descanso (s)<input class="in" data-f="descanso" inputmode="numeric" value="${v(ex.descanso)}"></label>
+      <label>Descanso (s)<input class="in" data-f="descanso" inputmode="numeric" placeholder="60" value="${v(ex.descanso)}"></label>
     </div>
-    <input class="in" data-f="obs" placeholder="Observação (opcional)" value="${v(ex.obs)}" maxlength="200">
-    <input class="in so-forca" data-f="video" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Vídeo (opcional): link do YouTube ou videos/nome.mp4" value="${v(ex.video)}" maxlength="300">
+    <details class="ex-mais" ${ex.obs || ex.video ? 'open' : ''}>
+      <summary>Observação e vídeo (opcional)</summary>
+      <input class="in" data-f="obs" placeholder="Observação (ex.: pegada fechada)" value="${v(ex.obs)}" maxlength="200">
+      <input class="in so-forca" data-f="video" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Vídeo: link do YouTube ou videos/nome.mp4" value="${v(ex.video)}" maxlength="300">
+    </details>
   </div>`;
+}
+
+// Janela para escolher o exercício: grupos que abrem um de cada vez (acordeão) + busca.
+function abrirEscolha(aoEscolher, textoAtual = '') {
+  const meus = nomesJaUsados().filter((n) => !todosOsNomes().includes(n)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const grupos = Object.entries(BASE).map(([g, lista]) => [g, lista]);
+  if (meus.length) grupos.push(['Meus exercícios', meus]);
+  const item = (n) => `<button type="button" class="lib-item" data-nome="${escaparHtml(n)}">${escaparHtml(n)}</button>`;
+  const f = abrirFolha(`
+    <h2>Escolher exercício</h2>
+    <input class="in lib-busca" type="search" data-busca placeholder="Buscar pelo nome…" autocomplete="off" value="">
+    <div class="lib-grupos" data-grupos>
+      ${grupos.map(([g, lista]) => `
+      <section class="lib-grupo">
+        <button type="button" class="lib-cab" data-grupo aria-expanded="false"><span class="lib-nome">${escaparHtml(g)}</span><span class="lib-n">${lista.length}</span>${ICONE_SETA}</button>
+        <div class="lib-itens" hidden>${lista.map(item).join('')}</div>
+      </section>`).join('')}
+    </div>
+    <div class="lib-res" data-res hidden></div>
+    <p class="mudo peq lib-dica">Não achou o seu? Busque e toque em <b>Usar</b>, ou feche e digite o nome.</p>
+    <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Fechar</button></div>`, { classe: 'folha-alta folha-lib' });
+  const el = f.el;
+  const busca = el.querySelector('[data-busca]');
+  const gruposEl = el.querySelector('[data-grupos]');
+  const res = el.querySelector('[data-res]');
+  const todos = grupos.flatMap(([g, l]) => l.map((n) => ({ n, g })));
+
+  busca.addEventListener('input', () => {
+    const q = norm(busca.value);
+    gruposEl.hidden = !!q;
+    res.hidden = !q;
+    if (!q) return;
+    const achou = todos.filter((x) => norm(x.n).includes(q));
+    res.innerHTML = (achou.length ? achou.map((x) => `<button type="button" class="lib-item" data-nome="${escaparHtml(x.n)}">${escaparHtml(x.n)}<small>${escaparHtml(x.g)}</small></button>`).join('') : '<p class="mudo peq">Nenhum exercício com esse nome.</p>')
+      + `<button type="button" class="lib-item lib-usar" data-nome="${escaparHtml(busca.value.trim())}">Usar “${escaparHtml(busca.value.trim())}”</button>`;
+  });
+  el.addEventListener('click', (e) => {
+    const cab = e.target.closest('[data-grupo]');
+    if (cab) {
+      const abrir = cab.getAttribute('aria-expanded') !== 'true';
+      el.querySelectorAll('[data-grupo]').forEach((c) => { c.setAttribute('aria-expanded', 'false'); c.nextElementSibling.hidden = true; });
+      if (abrir) {
+        cab.setAttribute('aria-expanded', 'true');
+        cab.nextElementSibling.hidden = false;
+        cab.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+      return;
+    }
+    const it = e.target.closest('.lib-item');
+    if (it && it.dataset.nome) { aoEscolher(it.dataset.nome); f.fechar(); }
+  });
+  if (textoAtual) { busca.value = textoAtual; busca.dispatchEvent(new Event('input')); }
+  return f;
 }
 
 function nomesJaUsados() {
@@ -102,27 +164,36 @@ export function abrirEditorTreino(treino, opcoes = {}) {
   const exs = treino && (treino.exercicios || []).length ? treino.exercicios : [{}];
   const folha = abrirFolha(`
     <h2>${treino ? `Editar ${rotulo}` : `Novo ${rotulo}`}</h2>
-    <label class="campo">Nome do treino
-      <input class="in" data-f="nome-treino" maxlength="60" placeholder="Ex.: Treino A" value="${treino ? escaparHtml(treino.nome) : ''}">
-    </label>
-    <div class="campo">
-      <span class="rotulo">Dias da semana (opcional)</span>
+    <section class="ed-card">
+      <label class="ed-rot" for="ed-nome-treino">Nome do treino</label>
+      <input class="in" id="ed-nome-treino" data-f="nome-treino" maxlength="60" placeholder="Ex.: Treino A" value="${treino ? escaparHtml(treino.nome) : ''}">
+      <span class="ed-rot ed-rot2">Dias da semana <small>(opcional)</small></span>
       <div class="dias">
         ${ORDEM_DIAS.map((d) => `<button type="button" class="dia-chip" data-dia="${d}" aria-pressed="${treino && (treino.dias || []).includes(d) ? 'true' : 'false'}">${DIAS_CURTOS[d]}</button>`).join('')}
       </div>
-      <p class="mudo peq">Os treinos marcados para o dia aparecem na aba Hoje.</p>
-    </div>
-    <datalist id="lista-exercicios">${nomesJaUsados().map((n) => `<option value="${escaparHtml(n)}"></option>`).join('')}</datalist>
-    <p class="mudo peq">Para mudar a ordem, <b>segure o ⠿</b> de um exercício e arraste. O <b>✕</b> remove.</p>
+      <p class="mudo peq">O treino marcado para o dia aparece na aba Hoje.</p>
+    </section>
+    <div class="ed-cab"><h3>Exercícios</h3><span class="mudo peq" data-cont></span></div>
+    <p class="mudo peq ed-dica">Toque em <b>☰</b> para escolher da lista. Segure o <b>⠿</b> e arraste para mudar a ordem.</p>
     <div id="ex-lista">${exs.map(blocoExercicio).join('')}</div>
     <button class="btn secundario cheio" type="button" data-ed="add">+ Adicionar exercício</button>
     <p class="erro" data-erro role="alert"></p>
-    <div class="linha-botoes">
+    <div class="linha-botoes ed-rodape">
       ${treino ? '<button class="btn perigo-claro" type="button" data-ed="excluir">Excluir</button>' : '<button class="btn secundario" type="button" data-fechar>Cancelar</button>'}
       <button class="btn" type="button" data-ed="salvar">Salvar</button>
     </div>`, { classe: 'folha-alta' });
 
   const el = folha.el;
+  const atualizarCont = () => { const n = el.querySelectorAll('[data-ex]').length; el.querySelector('[data-cont]').textContent = `${n} ${n === 1 ? 'exercício' : 'exercícios'}`; };
+  atualizarCont();
+  const escolher = (bloco) => {
+    const campo = bloco.querySelector('[data-f="nome"]');
+    abrirEscolha((nome) => {
+      campo.value = nome;
+      const ser = bloco.querySelector('[data-f="series"]');
+      if (ser && !ser.value && !bloco.classList.contains('cardio')) ser.focus();
+    }, '');
+  };
   const erro = (t) => { const e = el.querySelector('[data-erro]'); e.textContent = t; if (t) e.scrollIntoView({ block: 'center' }); };
 
   // Segurar a alça (⠿) e arrastar muda a ordem dos exercícios.
@@ -165,10 +236,12 @@ export function abrirEditorTreino(treino, opcoes = {}) {
     if (dia) { dia.setAttribute('aria-pressed', dia.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); return; }
 
     if (e.target.matches('[data-f="cardio"]')) { e.target.closest('[data-ex]').classList.toggle('cardio', e.target.checked); return; }
+    const pick = e.target.closest('[data-pick]');
+    if (pick) { escolher(pick.closest('[data-ex]')); return; }
     const mv = e.target.closest('[data-mv]');
     if (mv) {
       const bloco = mv.closest('[data-ex]');
-      if (mv.dataset.mv === 'del') bloco.remove();
+      if (mv.dataset.mv === 'del') { bloco.remove(); atualizarCont(); }
       return;
     }
 
@@ -177,7 +250,10 @@ export function abrirEditorTreino(treino, opcoes = {}) {
     if (b.dataset.ed === 'add') {
       el.querySelector('#ex-lista').insertAdjacentHTML('beforeend', blocoExercicio());
       const blocos = el.querySelectorAll('[data-ex]');
-      blocos[blocos.length - 1].querySelector('[data-f="nome"]').focus();
+      const novo = blocos[blocos.length - 1];
+      atualizarCont();
+      novo.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      escolher(novo);
     } else if (b.dataset.ed === 'salvar') {
       const d = coletar(el);
       if (!d.nome) return erro('Dê um nome para o treino.');

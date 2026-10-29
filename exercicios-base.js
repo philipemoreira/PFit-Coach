@@ -13,7 +13,7 @@ export const BASE = {
   Abdômen: ['Abdominal reto', 'Abdominal infra', 'Abdominal na máquina', 'Abdominal com roda', 'Prancha', 'Elevação de pernas', 'Abdominal oblíquo']
 };
 
-const norm = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+export const norm = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const MAPA = new Map();
 Object.entries(BASE).forEach(([grupo, lista]) => lista.forEach((n) => MAPA.set(norm(n), grupo)));
 
