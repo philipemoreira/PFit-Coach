@@ -34,3 +34,6 @@ export function lerVideo(url) {
 export const urlEmbed = (id) => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1&modestbranding=1`;
 export const urlVimeo = (id) => `https://player.vimeo.com/video/${id}?playsinline=1`;
 export const urlMiniatura = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
+// Botão "Ver como fazer": abre a busca de vídeos do Google com o nome do exercício.
+export const urlBuscaGoogle = (nome) => `https://www.google.com/search?q=${encodeURIComponent(`como fazer ${String(nome || '').trim()} exercício academia`)}&tbm=vid`;

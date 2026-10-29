@@ -8,7 +8,7 @@ import { volumeDasSeries, maiorCargaAntes, formatarVolume } from './metricas.js'
 import { abrirAnilhas } from './anilhas.js';
 import { nav } from './nav.js';
 import { dicaDoExercicio } from './dicas.js';
-import { lerVideo, urlEmbed, urlVimeo, urlMiniatura } from './video.js';
+import { lerVideo, urlEmbed, urlVimeo, urlMiniatura, urlBuscaGoogle } from './video.js';
 
 let S = null; // treino em andamento
 let raiz = null;
@@ -211,6 +211,9 @@ function htmlSeries(ex, i) {
     </div>`;
 }
 
+// Quebra o texto da dica em passos (uma frase por passo).
+const passosDe = (txt) => String(txt).split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+
 const videoOculto = () => { try { return localStorage.getItem('treino-video-oculto') === '1'; } catch { return false; } };
 
 // Vídeo e dica de como fazer. Esta parte não é redesenhada a cada série marcada (para o vídeo não reiniciar).
@@ -218,7 +221,6 @@ function htmlMidia(ex) {
   if (ex.cardio) return '';
   const v = lerVideo(ex.video);
   const dica = dicaDoExercicio(ex.nome);
-  if (!v && !dica) return '';
   const oculto = videoOculto();
   let corpo = '';
   if (v && v.tipo === 'youtube') {
@@ -232,9 +234,13 @@ function htmlMidia(ex) {
   }
   return `
     <div class="midia">
+      <div class="midia-botoes ${dica ? '' : 'so-um'}">
+        ${dica ? '<button type="button" class="busca-ex como-btn" data-t="como-toggle" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>Como fazer</span></button>' : ''}
+        <a class="busca-ex" href="${escaparHtml(urlBuscaGoogle(ex.nome))}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15 15l5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>Pesquisar <small>no Google</small></span></a>
+      </div>
+      ${dica ? `<div class="como-passos" hidden><h4>Passo a passo</h4><ol>${passosDe(dica.texto).map((p) => `<li>${escaparHtml(p)}</li>`).join('')}</ol><p class="mudo peq">Dica geral. Se sentir dor (não é o cansaço normal do músculo), pare e procure um profissional.</p></div>` : ''}
       ${v ? `<div class="midia-cab"><b>Vídeo do exercício</b><button type="button" class="link" data-t="video-toggle">${oculto ? 'Mostrar' : 'Recolher'}</button></div>
       <div class="midia-corpo" ${oculto ? 'hidden' : ''}>${corpo}</div>` : ''}
-      ${dica ? `<details class="como-fazer"><summary>Como fazer</summary><p>${escaparHtml(dica.texto)}</p><p class="mudo peq">Dica geral. Se sentir dor (não é o cansaço normal do músculo), pare e procure um profissional.</p></details>` : ''}
     </div>`;
 }
 
@@ -424,6 +430,13 @@ function aoClicar(e) {
   } else if (acao === 'video-play') {
     const id = b.dataset.id;
     b.outerHTML = `<div class="video-box tocando"><iframe src="${urlEmbed(id)}" title="Vídeo do exercício" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`;
+  } else if (acao === 'como-toggle') {
+    const painel = raiz.querySelector('.como-passos');
+    if (painel) {
+      painel.hidden = !painel.hidden;
+      b.setAttribute('aria-expanded', String(!painel.hidden));
+      if (!painel.hidden) painel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
   } else if (acao === 'video-toggle') {
     const corpo = raiz.querySelector('.midia-corpo');
     const esconder = !corpo.hidden;
