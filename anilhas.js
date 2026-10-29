@@ -2,18 +2,30 @@
 import { abrirFolha } from './folha.js';
 import { escaparHtml, numero, formatarNumero } from './util.js';
 
-const ANILHAS = [25, 20, 15, 10, 5, 2.5, 1.25]; // anilhas comuns de academia, em kg
+// Anilhas da academia do Philipe (kg). São as únicas usadas na conta.
+export const ANILHAS = [25, 20, 10, 5, 2.5];
 
 // Só anilhas: a carga é dividida por 2 (um lado e outro). O peso da barra não entra na conta.
-export function calcularAnilhas(total) {
-  let lado = total / 2;
+// Usa SÓ as anilhas disponíveis, com o menor número de anilhas por lado. Se não fecha exato, mostra o mais perto sem passar.
+export function calcularAnilhas(total, disponiveis = ANILHAS) {
+  const lado = total / 2;
   if (!(lado > 0)) return null;
+  const U = 4; // trabalha em quartos de kg para não errar com decimais
+  const pl = [...disponiveis].sort((x, y) => y - x).map((kg) => ({ kg, u: Math.round(kg * U) }));
+  const alvo = Math.floor(lado * U + 1e-9);
+  const dp = new Array(alvo + 1).fill(Infinity);
+  dp[0] = 0;
+  for (let v = 1; v <= alvo; v++) for (const p of pl) if (p.u <= v && dp[v - p.u] + 1 < dp[v]) dp[v] = dp[v - p.u] + 1;
+  let r = alvo;
+  while (r > 0 && dp[r] === Infinity) r--;
   const usadas = [];
-  for (const a of ANILHAS) {
-    const n = Math.floor((lado + 1e-9) / a);
-    if (n > 0) { usadas.push({ kg: a, n }); lado -= n * a; }
+  let resto = r;
+  for (const p of pl) {
+    let n = 0;
+    while (resto - (n + 1) * p.u >= 0 && dp[resto - (n + 1) * p.u] === dp[resto] - (n + 1)) n++;
+    if (n > 0) { usadas.push({ kg: p.kg, n }); resto -= n * p.u; }
   }
-  return { usadas, sobra: Math.round(lado * 1000) / 1000 };
+  return { usadas, sobra: Math.round((lado - r / U) * 1000) / 1000 };
 }
 
 export function abrirAnilhas(cargaInicial) {

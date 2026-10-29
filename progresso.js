@@ -15,7 +15,6 @@ import { linhaSessao } from './historico.js';
 import { volumeSessao, volumeDoDia, metaVolume, metaPeso, sequenciaSemanas, formatarVolume, conquistas, metaMacros, textoProgresso, percentualConquista } from './metricas.js';
 
 let exercicioEscolhido = '';
-let conquistasTodas = false; // mostra todas as conquistas em andamento
 let mesVisto = null; // primeiro dia do mês mostrado no calendário
 const norm = (s) => String(s || '').trim().toLowerCase();
 
@@ -300,17 +299,20 @@ function linhaConquista(c) {
 
 const textoContagemConquistas = () => { const l = conquistas(); return `${l.filter((c) => c.ok).length} de ${l.length}`; };
 
-function blocoConquistas() {
+function listaConquistasOrdenada() {
   const lista = conquistas();
   const faltam = lista.filter((c) => !c.ok).sort((a, b) => percentualConquista(b) - percentualConquista(a));
-  const feitas = lista.filter((c) => c.ok);
-  const todas = [...faltam, ...feitas]; // as conquistadas (verdes) vêm depois das que estão em andamento
-  const visiveis = conquistasTodas ? todas : todas.slice(0, 3);
+  return [...faltam, ...lista.filter((c) => c.ok)]; // as conquistadas (verdes) vêm depois das em andamento
+}
+
+function blocoConquistas() {
+  const todas = listaConquistasOrdenada();
+  const faltam = todas.filter((c) => !c.ok); // no bloco só aparecem as que ainda não foram concluídas; as verdes ficam na janela
   return `
   <section class="card conq-card">
     <div class="card-topo"><h2>Conquistas</h2><span class="selo">${textoContagemConquistas()}</span></div>
-    <div class="conq-lista">${visiveis.map(linhaConquista).join('')}</div>
-    ${todas.length > 3 ? `<button class="btn secundario cheio" type="button" data-acao="conquistas-todas">${conquistasTodas ? 'Mostrar menos' : `Ver mais (${todas.length - 3})`}</button>` : ''}
+    ${faltam.length ? `<div class="conq-lista">${faltam.slice(0, 3).map((c) => linhaConquista(c)).join('')}</div>` : '<p class="mudo">Você conquistou tudo! 🏆</p>'}
+    <button class="btn secundario cheio" type="button" data-acao="conquistas-todas">Ver todas as ${todas.length} conquistas ›</button>
   </section>`;
 }
 
@@ -374,7 +376,13 @@ export const progresso = {
   },
   acoes: {
     'fotos-abrir': () => abrirFotos({ uid: estado.uid, dono: true }),
-    'conquistas-todas': () => { conquistasTodas = !conquistasTodas; nav.renderizar(); },
+    'conquistas-todas': () => {
+      const todas = listaConquistasOrdenada();
+      abrirFolha(`<div class="conq-modal">
+        <div class="card-topo"><h2>Conquistas</h2><span class="selo">${textoContagemConquistas()}</span></div>
+        <div class="conq-modal-lista">${todas.map((c) => linhaConquista(c)).join('')}</div>
+      </div><button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`, { classe: 'folha-conq' });
+    },
     'conquista-ver': (el) => {
       const c = conquistas().find((x) => x.nome === el.dataset.n);
       if (!c) return;

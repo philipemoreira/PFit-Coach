@@ -101,7 +101,7 @@ function blocoVolumeHoje() {
     <div class="card-topo"><h2>Volume de hoje</h2>${mv && vol >= mv ? '<span class="selo">meta batida 🎉</span>' : ''}</div>
     <p class="volume-num">${Math.round(vol).toLocaleString('pt-BR')} <small>kg levantados</small></p>
     ${mv ? `${barra(vol, mv)}<p class="mudo peq">Meta do dia: ${formatarVolume(mv)}${vol < mv ? ` · faltam ${formatarVolume(mv - vol)}` : ''}</p>`
-    : '<p class="mudo peq">Soma de carga × repetições dos seus treinos de hoje. <button class="link" type="button" data-acao="metas-editar">Definir meta</button></p>'}
+    : `<p class="mudo peq">Soma de carga × repetições dos seus treinos de hoje. ${estado.vinculo ? '' : '<button class="link" type="button" data-acao="meta-editar" data-meta="volume">Definir meta</button>'}</p>`}
     <button class="btn secundario cheio pequeno" type="button" data-acao="stats-abrir">Ver estatísticas ›</button>
   </section>`;
 }
@@ -114,7 +114,7 @@ function blocoAgua() {
   <section class="card">
     <div class="card-topo"><h2>Água</h2><span class="selo">${seq.semanas > 0 ? `🔥 ${seq.semanas} sem. seguida${seq.semanas === 1 ? '' : 's'}` : 'sem sequência ainda'}</span></div>
     <p class="grande">${(ml / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} <small>litros</small></p>
-    ${ma ? `${barra(ml, ma)}<p class="mudo peq">Meta: ${(ma / 1000).toLocaleString('pt-BR')} L · 1 copo = 250 ml</p>` : '<p class="mudo peq">1 copo = 250 ml. <button class="link" type="button" data-acao="metas-editar">Definir meta</button></p>'}
+    ${ma ? `${barra(ml, ma)}<p class="mudo peq">Meta: ${(ma / 1000).toLocaleString('pt-BR')} L · 1 copo = 250 ml</p>` : `<p class="mudo peq">1 copo = 250 ml. ${estado.vinculo ? '' : '<button class="link" type="button" data-acao="meta-editar" data-meta="agua">Definir meta</button>'}</p>`}
     <div class="acoes-card linha"><button class="btn secundario" type="button" data-acao="agua-menos" aria-label="Tirar um copo">− Copo</button><button class="btn" type="button" data-acao="agua-mais" aria-label="Adicionar um copo de 250 mililitros">+ Copo</button></div>
   </section>`;
 }

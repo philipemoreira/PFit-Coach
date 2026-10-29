@@ -56,32 +56,38 @@ const comoPagar = () => (COMO_PAGAR
   ? `<p>${escaparHtml(COMO_PAGAR)}</p>`
   : '<p class="mudo">Para renovar, fale com quem te passou o app.</p>');
 
-// Card do Perfil (e tela de acesso vencido).
-export function blocoAssinatura() {
+// Conteúdo da assinatura: { cls, html } (html começa com o título). Usado no card da conta.
+export function corpoAssinatura() {
   const a = acesso();
-  if (a.estado === 'carregando') return '';
+  if (a.estado === 'carregando') return null;
   if (a.estado === 'vencido') {
     if (a.origem === 'personal') {
-      return `<section class="card destaque aviso-venc"><h2>Acesso pausado</h2>
-        <p>A assinatura do seu personal venceu. Assim que ele renovar, seu acesso volta sozinho. Seus dados estão guardados.</p></section>`;
+      return { cls: 'aviso-venc', html: `<h3 class="sub-conta">Acesso pausado</h3>
+        <p>A assinatura do seu personal venceu. Assim que ele renovar, seu acesso volta sozinho. Seus dados estão guardados.</p>` };
     }
-    return `<section class="card destaque aviso-venc"><h2>Seu acesso venceu</h2>
-      <p>Seus dados continuam guardados. Para voltar a usar, renove a assinatura.</p>${tabelaPreco()}${comoPagar()}</section>`;
+    return { cls: 'aviso-venc', html: `<h3 class="sub-conta">Seu acesso venceu</h3>
+      <p>Seus dados continuam guardados. Para voltar a usar, renove a assinatura.</p>${tabelaPreco()}${comoPagar()}` };
   }
   if (a.origem === 'personal') {
-    return `<section class="card"><h2>Assinatura</h2><p class="mudo">Seu acesso está incluído no plano do seu personal. Você não paga nada.</p></section>`;
+    return { cls: '', html: `<h3 class="sub-conta">Assinatura</h3><p class="mudo">Seu acesso está incluído no plano do seu personal. Você não paga nada.</p>` };
   }
   const teste = a.plano === 'teste';
-  return `<section class="card"><h2>Assinatura</h2>
+  return { cls: '', html: `<h3 class="sub-conta">Assinatura</h3>
     <p>${teste ? 'Teste grátis' : 'Plano ativo'} · vale até <strong>${dataBr(a.ate)}</strong> (${a.dias} ${a.dias === 1 ? 'dia' : 'dias'}).</p>
-    ${tabelaPreco()}${a.dias <= 7 ? comoPagar() : ''}</section>`;
+    ${tabelaPreco()}${a.dias <= 7 ? comoPagar() : ''}` };
+}
+
+// Card da assinatura sozinho (mantido para quem precisar).
+export function blocoAssinatura() {
+  const c = corpoAssinatura();
+  return c ? `<section class="card ${c.cls ? 'destaque ' + c.cls : ''}">${c.html}</section>` : '';
 }
 
 // Aviso curto na aba Hoje quando faltam 7 dias ou menos.
 export function avisoAssinatura() {
   const a = acesso();
   if (a.estado !== 'ativo' || a.origem !== 'proprio' || a.dias > 7) return '';
-  return `<p class="alerta-atraso" role="status">⏳ Sua assinatura vence em ${a.dias} ${a.dias === 1 ? 'dia' : 'dias'} (${dataBr(a.ate)}). Veja como renovar em Minha conta (toque na sua inicial, no topo).</p>`;
+  return `<p class="alerta-atraso" role="status">⏳ Sua assinatura vence em ${a.dias} ${a.dias === 1 ? 'dia' : 'dias'} (${dataBr(a.ate)}). Veja como renovar em Minha conta (toque na engrenagem, no topo).</p>`;
 }
 
 // Aviso para o personal quando passou do limite da faixa que paga.

@@ -43,6 +43,18 @@ function ultimaVez(nome) {
   return null;
 }
 
+// Aquecimento da última vez (carga e reps da primeira série de aquecimento feita nesse exercício).
+function ultimoAquecimento(nome) {
+  const k = norm(nome);
+  const ordenadas = [...estado.sessoes].sort((a, b) => String(b.fim || b.data).localeCompare(String(a.fim || a.data)));
+  for (const s of ordenadas) {
+    const ex = (s.exercicios || []).find((e) => norm(e.nome) === k && !e.cardio);
+    const aq = ex && (ex.series || []).find((x) => x.feito && x.tipo === 'aq');
+    if (aq) return { carga: aq.carga, reps: aq.reps };
+  }
+  return null;
+}
+
 function ultimoCardio(nome) {
   const k = norm(nome);
   const ordenadas = [...estado.sessoes].sort((a, b) => String(b.fim || b.data).localeCompare(String(a.fim || a.data)));
@@ -61,7 +73,7 @@ export function iniciarTreino(treino) {
     inicio: Date.now(),
     atual: 0,
     nota: '',
-    exercicios: (treino.exercicios || []).map((ex) => {
+    exercicios: (treino.exercicios || []).map((ex, idx, todos) => {
       if (ex.cardio) {
         const uc = ultimoCardio(ex.nome);
         return { nome: ex.nome, cardio: true, video: '', obs: ex.obs || '', descanso: 0, planoMin: ex.minutos || null, ultimaMin: uc, minutos: String(ex.minutos || (uc ? uc.minutos : '') || ''), feito: false, series: [] };
@@ -78,7 +90,11 @@ export function iniciarTreino(treino) {
           feito: false
         });
       }
-      return { nome: ex.nome, maxAnt: maiorCargaAntes(ex.nome), video: ex.video || '', obs: ex.obs || '', descanso: ex.descanso || 0, planoSeries: n, planoReps: ex.reps || '', planoCarga: ex.carga ?? null, ultima: ult, series };
+      // O primeiro exercício de força de todo treino começa com uma série de aquecimento (a mais, não conta no volume nem nos recordes).
+      const aquecer = idx === todos.findIndex((e) => !e.cardio);
+      const ua = aquecer ? ultimoAquecimento(ex.nome) : null;
+      if (aquecer) series.unshift({ tipo: 'aq', carga: ua && ua.carga != null ? String(ua.carga).replace('.', ',') : '', reps: ua && ua.reps != null ? String(ua.reps) : '', feito: false });
+      return { nome: ex.nome, aquecer, ultimaAq: ua, maxAnt: maiorCargaAntes(ex.nome), video: ex.video || '', obs: ex.obs || '', descanso: ex.descanso || 0, planoSeries: n, planoReps: ex.reps || '', planoCarga: ex.carga ?? null, ultima: ult, series };
     })
   };
   guardar();
@@ -153,8 +169,8 @@ const TIPOS = [
 const LETRA_TIPO = { aq: 'A', dr: 'D', fa: 'F' };
 const NOME_TIPO = { aq: 'aquecimento', dr: 'drop', fa: 'até a falha' };
 
-const seriesFeitas = (ex) => (ex.cardio ? (ex.feito ? 1 : 0) : ex.series.filter((x) => x.feito).length);
-const seriesTotal = (ex) => (ex.cardio ? 1 : ex.series.length);
+const seriesFeitas = (ex) => (ex.cardio ? (ex.feito ? 1 : 0) : ex.series.filter((x) => x.feito && x.tipo !== 'aq').length);
+const seriesTotal = (ex) => (ex.cardio ? 1 : ex.series.filter((x) => x.tipo !== 'aq').length);
 const exercicioCompleto = (ex) => seriesFeitas(ex) === seriesTotal(ex);
 
 function cartaoCardio(ex, i) {
@@ -170,14 +186,15 @@ function cartaoCardio(ex, i) {
   </section>`;
 }
 
-const anteriorDe = (ex, j) => (ex.ultima && ex.ultima.series[j]) || null;
+const desl = (ex) => (ex.aquecer ? 1 : 0); // linhas de aquecimento no início
+const anteriorDe = (ex, j) => (j < desl(ex) ? (ex.ultimaAq || null) : ((ex.ultima && ex.ultima.series[j - desl(ex)]) || null));
 
 // Séries do exercício atual: uma linha por série (número, kg, reps, concluir).
 function htmlSeries(ex, i) {
   if (ex.cardio) return cartaoCardio(ex, i);
   const linhas = ex.series.map((s, j) => `
     <div class="serie2 ${s.feito ? 'feita' : ''}">
-      <button type="button" class="num tipo-${s.tipo || 'n'}" data-t="tipo" data-e="${i}" data-s="${j}" aria-label="Série ${j + 1}${s.tipo ? ', ' + NOME_TIPO[s.tipo] : ''}. Toque para mudar o tipo">${s.tipo ? LETRA_TIPO[s.tipo] : j + 1}</button>
+      <button type="button" class="num tipo-${s.tipo || 'n'}" data-t="tipo" data-e="${i}" data-s="${j}" aria-label="Série ${j + 1 - desl(ex)}${s.tipo ? ', ' + NOME_TIPO[s.tipo] : ''}. Toque para mudar o tipo">${s.tipo ? LETRA_TIPO[s.tipo] : j + 1 - desl(ex)}</button>
       <input class="in-num grande" inputmode="decimal" enterkeyhint="next" data-t="carga" data-e="${i}" data-s="${j}" value="${escaparHtml(s.carga)}" placeholder="0" aria-label="Carga da série ${j + 1} em quilos">
       <input class="in-num grande" inputmode="numeric" enterkeyhint="done" data-t="reps" data-e="${i}" data-s="${j}" value="${escaparHtml(s.reps)}" placeholder="0" aria-label="Repetições da série ${j + 1}">
       <button type="button" class="check ${s.feito ? 'on' : ''}" data-t="check" data-e="${i}" data-s="${j}" aria-pressed="${s.feito}" aria-label="${s.feito ? 'Desmarcar' : 'Concluir'} série ${j + 1}">${CHECK}</button>
@@ -190,7 +207,7 @@ function htmlSeries(ex, i) {
     <div class="ex-rodape">
       <button type="button" class="btn-ex" data-t="mais" data-e="${i}">+ Série</button>
       <button type="button" class="btn-ex" data-t="anilhas" data-e="${i}">Calcular anilhas</button>
-      ${ex.series.length > 1 ? `<button type="button" class="btn-ex" data-t="menos" data-e="${i}">− Série</button>` : ''}
+      ${ex.series.length > 1 + desl(ex) ? `<button type="button" class="btn-ex" data-t="menos" data-e="${i}">− Série</button>` : ''}
     </div>`;
 }
 
@@ -362,7 +379,7 @@ function alternarSerie(i, j) {
   if (s.feito) {
     // Se a pessoa não digitou nada, usa o que veio da última vez ou da série de cima.
     const ant = anteriorDe(S.exercicios[i], j);
-    const cima = j > 0 ? S.exercicios[i].series[j - 1] : null;
+    const cima = j > desl(S.exercicios[i]) ? S.exercicios[i].series[j - 1] : null;
     if (!String(s.carga || '').trim()) s.carga = ant && ant.carga != null ? String(ant.carga).replace('.', ',') : (cima ? cima.carga : s.carga);
     if (!String(s.reps || '').trim()) s.reps = ant && ant.reps != null ? String(ant.reps) : (cima ? cima.reps : s.reps);
   }
@@ -427,7 +444,7 @@ function aoClicar(e) {
     guardar(); atualizar();
   } else if (acao === 'menos') {
     const ex = S.exercicios[i];
-    if (ex.series.length > 1) { ex.series.pop(); guardar(); atualizar(); }
+    if (ex.series.length > 1 + desl(ex)) { ex.series.pop(); guardar(); atualizar(); }
   } else if (acao === 'cancelar') {
     cancelar();
   } else if (acao === 'finalizar') {
@@ -537,8 +554,8 @@ async function cancelar() {
 }
 
 async function finalizar() {
-  const total = S.exercicios.reduce((n, e) => n + (e.cardio ? 1 : e.series.length), 0);
-  const feitas = S.exercicios.reduce((n, e) => n + (e.cardio ? (e.feito ? 1 : 0) : e.series.filter((s) => s.feito).length), 0);
+  const total = S.exercicios.reduce((n, e) => n + (e.cardio ? 1 : e.series.filter((s) => s.tipo !== 'aq').length), 0);
+  const feitas = S.exercicios.reduce((n, e) => n + (e.cardio ? (e.feito ? 1 : 0) : e.series.filter((s) => s.feito && s.tipo !== 'aq').length), 0);
   if (feitas === 0) {
     if (!(await confirmar('Você não marcou nenhuma série como feita. Salvar mesmo assim?', { ok: 'Salvar' }))) return;
   } else if (feitas < total) {

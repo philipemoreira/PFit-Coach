@@ -37,7 +37,7 @@ const ABAS = [
   { id: 'progresso', nome: 'Progresso', tela: progresso },
   { id: 'alunos', nome: 'Alunos', tela: personal, soPersonal: true }
 ];
-// Telas que não ficam no menu de baixo: abrem pela foto/inicial no topo.
+// Telas que não ficam no menu de baixo: abrem pela engrenagem no topo.
 const EXTRAS = [
   { id: 'conta', nome: 'Minha conta', tela: contaTela },
   { id: 'config', nome: 'Configurações', tela: configTela },
@@ -89,12 +89,10 @@ function htmlNav() {
 }
 
 function htmlBarra() {
-  const nome = ((estado.perfil && estado.perfil.nome) || '').trim();
-  const inicial = (nome || '?').charAt(0).toUpperCase();
   return `
       <div class="topbar-marca" aria-hidden="true"><svg viewBox="0 0 512 512"><rect width="512" height="512" rx="110" fill="#181b22"/><g fill="#c6f432"><rect x="196" y="236" width="120" height="40" rx="8"/><rect x="150" y="176" width="46" height="160" rx="14"/><rect x="316" y="176" width="46" height="160" rx="14"/><rect x="108" y="206" width="34" height="100" rx="12"/><rect x="370" y="206" width="34" height="100" rx="12"/></g></svg><b>Treino</b></div>
-      <button type="button" class="conta-btn" data-acao="aba" data-aba="conta" aria-label="Minha conta">
-        <span class="conta-nome">${escaparHtml(nome.split(' ')[0])}</span><span class="avatar peq">${escaparHtml(inicial)}</span>
+      <button type="button" class="conta-btn engrenagem" data-acao="aba" data-aba="conta" aria-label="Minha conta e configurações" title="Minha conta e configurações">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/><path d="M19.4 13.5c.1-.5.1-1 .1-1.5s0-1-.1-1.5l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7.4 7.4 0 0 0-2.6-1.5l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5a7.4 7.4 0 0 0-2.6 1.5l-2.4-1a.5.5 0 0 0-.6.2L2.4 8.3a.5.5 0 0 0 .1.6l2 1.6c-.1.5-.1 1-.1 1.5s0 1 .1 1.5l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3c.1.2.4.3.6.2l2.4-1c.8.6 1.6 1.1 2.6 1.5l.4 2.5c0 .2.3.4.5.4h3.8c.2 0 .5-.2.5-.4l.4-2.5c1-.4 1.8-.9 2.6-1.5l2.4 1c.2.1.5 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6z"/></svg>
       </button>`;
 }
 

@@ -2,7 +2,7 @@
 import { auth, signOut, db, doc, getDoc } from './firebase.js';
 import { estado } from './estado.js';
 import { abrirFolha, confirmar } from './folha.js';
-import { escaparHtml, dataLocal, toast, numero, formatarDataCurta } from './util.js';
+import { escaparHtml, dataLocal, toast, numero, formatarDataCurta, avatarHtml, reduzirFoto } from './util.js';
 import { salvarPerfil, lerTudo, gravarVarios, salvarGlobal, removerGlobal } from './dados.js';
 import { temaSalvo, definirTema } from './tema.js';
 import { nav } from './nav.js';
@@ -10,7 +10,7 @@ import { metaVolume, metaAgua, metaPeso, metaMacros, formatarVolume } from './me
 import { abrirPrivacidade, abrirTermos, abrirExclusao } from './conta.js';
 import { abrirAjuda } from './ajuda.js';
 import { abrirOnboarding, resumoAnamnese } from './onboarding.js';
-import { blocoAssinatura, bloqueado } from './assinatura.js';
+import { corpoAssinatura, bloqueado } from './assinatura.js';
 
 const COLECOES = ['treinos', 'regras', 'dietaItens', 'sessoes', 'peso', 'checks', 'agua', 'medidas', 'alimentos', 'refeicoes'];
 
@@ -104,24 +104,122 @@ const topoSub = (titulo) => `
       <h1>${titulo}</h1>
     </header>`;
 
+// Janela de UMA meta só (volume, água ou calorias), aberta pelo botão "Definir meta" de cada cartão.
+const METAS_JANELA = {
+  volume: {
+    icone: '🏋️', titulo: 'Meta de volume por dia',
+    desc: 'Quantos quilos você quer levantar em um dia. É a soma de carga × repetições dos seus treinos.',
+    campos: () => [{ k: 'vol', rotulo: 'Volume por dia', un: 'kg', modo: 'numeric', valor: metaVolume() || '', ph: '0' }],
+    tem: () => !!metaVolume(),
+    ler(g) {
+      const t = g('vol'); const v = t ? numero(t) : null;
+      if (!t || v === null || v <= 0 || v > 1000000) return null;
+      return { metaVolume: v };
+    },
+    limpar: { metaVolume: null }
+  },
+  agua: {
+    icone: '💧', titulo: 'Meta de água por dia',
+    desc: 'Quantos litros você quer beber por dia. Um copo no app é 250 ml.',
+    campos: () => [{ k: 'agua', rotulo: 'Água por dia', un: 'litros', modo: 'decimal', valor: metaAgua() ? String(metaAgua() / 1000).replace('.', ',') : '', ph: '0', atalhos: ['2', '2,5', '3', '3,5', '4'] }],
+    tem: () => !!metaAgua(),
+    ler(g) {
+      const t = g('agua'); const a = t ? numero(t) : null;
+      if (!t || a === null || a <= 0 || a > 20) return null;
+      return { metaAgua: Math.round(a * 1000) };
+    },
+    limpar: { metaAgua: null }
+  },
+  kcal: {
+    icone: '🔥', titulo: 'Meta de calorias por dia',
+    desc: 'Calorias do dia. Proteína, carboidrato e gordura são opcionais.',
+    campos: () => {
+      const m = metaMacros();
+      return [
+        { k: 'kcal', rotulo: 'Calorias por dia', un: 'kcal', modo: 'numeric', valor: m.kcal || '', ph: '0' },
+        { k: 'prot', rotulo: 'Proteína', un: 'g', modo: 'numeric', valor: m.prot || '', ph: '—', pequeno: true },
+        { k: 'carb', rotulo: 'Carboidrato', un: 'g', modo: 'numeric', valor: m.carb || '', ph: '—', pequeno: true },
+        { k: 'gord', rotulo: 'Gordura', un: 'g', modo: 'numeric', valor: m.gord || '', ph: '—', pequeno: true }
+      ];
+    },
+    tem: () => !!metaMacros().kcal,
+    ler(g) {
+      const out = {};
+      for (const [k, campo, max, obrig] of [['kcal', 'metaKcal', 20000, true], ['prot', 'metaProt', 1000, false], ['carb', 'metaCarb', 2000, false], ['gord', 'metaGord', 1000, false]]) {
+        const t = g(k);
+        if (!t) { if (obrig) return null; out[campo] = null; continue; }
+        const n = numero(t);
+        if (n === null || n <= 0 || n > max) return null;
+        out[campo] = n;
+      }
+      return out;
+    },
+    limpar: { metaKcal: null, metaProt: null, metaCarb: null, metaGord: null }
+  }
+};
+
+function abrirMeta(tipo) {
+  const cfg = METAS_JANELA[tipo];
+  if (!cfg) return;
+  const campos = cfg.campos();
+  const principais = campos.filter((c) => !c.pequeno);
+  const extras = campos.filter((c) => c.pequeno);
+  const campoHtml = (c) => `<label class="meta-campo ${c.pequeno ? 'peq' : ''}"><span class="meta-rot">${escaparHtml(c.rotulo)}</span>
+      <span class="meta-linha"><input class="meta-in" inputmode="${c.modo}" data-f="${c.k}" placeholder="${c.ph}" value="${escaparHtml(String(c.valor))}" autocomplete="off"><span class="meta-un">${escaparHtml(c.un)}</span></span></label>
+      ${c.atalhos ? `<div class="meta-atalhos" aria-label="Atalhos">${c.atalhos.map((a) => `<button type="button" class="chip-meta" data-atalho="${c.k}" data-v="${a}">${a} L</button>`).join('')}</div>` : ''}`;
+  const f = abrirFolha(`
+    <div class="meta-janela">
+      <div class="meta-icone" aria-hidden="true">${cfg.icone}</div>
+      <h2>${escaparHtml(cfg.titulo)}</h2>
+      <p class="mudo">${escaparHtml(cfg.desc)}</p>
+      ${principais.map(campoHtml).join('')}
+      ${extras.length ? `<div class="meta-extras">${extras.map(campoHtml).join('')}</div>` : ''}
+      <p class="erro" data-erro role="alert"></p>
+      <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Cancelar</button><button class="btn" type="button" data-ed="salvar">Salvar meta</button></div>
+      ${cfg.tem() ? '<button class="link meta-remover" type="button" data-ed="remover">Remover meta</button>' : ''}
+    </div>`);
+  const entrada = f.el.querySelector('.meta-in');
+  setTimeout(() => { try { entrada.focus(); entrada.select(); } catch { /* ok */ } }, 250);
+  f.el.addEventListener('click', (e) => {
+    const at = e.target.closest('[data-atalho]');
+    if (at) { f.el.querySelector(`[data-f="${at.dataset.atalho}"]`).value = at.dataset.v; return; }
+    if (e.target.closest('[data-ed="remover"]')) {
+      salvarPerfil(estado.uid, cfg.limpar, { merge: true });
+      f.fechar(); toast('Meta removida.');
+      return;
+    }
+    if (!e.target.closest('[data-ed="salvar"]')) return;
+    const dados = cfg.ler((k) => (f.el.querySelector(`[data-f="${k}"]`) || { value: '' }).value.trim());
+    if (!dados) { f.el.querySelector('[data-erro]').textContent = 'Digite um número válido.'; return; }
+    salvarPerfil(estado.uid, dados, { merge: true });
+    f.fechar(); toast('Meta salva.');
+  });
+  f.el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); f.el.querySelector('[data-ed="salvar"]').click(); } });
+}
+
 // Tela "Minha conta": quem sou eu, assinatura, personal e respostas iniciais.
 export const contaTela = {
   render() {
     const p = estado.perfil || {};
     const personal = p.papel === 'personal';
-    const inicial = (p.nome || '?').trim().charAt(0).toUpperCase();
+    const assin = corpoAssinatura();
     return `
     ${topoSub('Minha conta')}
-    <section class="card perfil-topo">
-      <div class="avatar" aria-hidden="true">${escaparHtml(inicial)}</div>
-      <div>
-        <h2>${escaparHtml(p.nome || '')}</h2>
-        <p class="mudo peq">${escaparHtml(estado.email)}</p>
-        <span class="selo">${personal ? 'Conta de personal' : 'Conta de aluno'}</span>
+    <section class="card conta-card">
+      <div class="perfil-topo">
+        <button type="button" class="avatar-btn" data-acao="foto-perfil" aria-label="Trocar foto de perfil">
+          ${avatarHtml(p.foto, p.nome)}
+          <span class="avatar-cam" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg></span>
+        </button>
+        <div class="perfil-quem">
+          <h2>${escaparHtml(p.nome || '')}</h2>
+          <p class="mudo peq">${escaparHtml(estado.email)}</p>
+          <span class="selo">${personal ? 'Conta de personal' : 'Conta de aluno'}</span>
+        </div>
+        <button class="btn pequeno secundario perfil-editar" type="button" data-acao="perfil-nome">Editar nome</button>
       </div>
-      <button class="btn pequeno secundario perfil-editar" type="button" data-acao="perfil-nome">Editar nome</button>
+      ${assin ? `<div class="conta-assin ${assin.cls}">${assin.html}</div>` : ''}
     </section>
-    ${blocoAssinatura()}
     ${secao(personal ? 'Personal e alunos' : 'Meu personal', personal ? 'Sua conta de personal e a conexão com seu próprio personal, se tiver.' : 'Conecte-se ao seu personal para ele montar seu treino e sua dieta.', cartaoPersonal(personal))}
     ${secao('Sobre você', 'Suas respostas iniciais. Ajudam o app e o seu personal.', `
     <section class="card">
@@ -192,6 +290,34 @@ export const contaTela = {
       definirTema(el.dataset.tema);
       nav.renderizar();
     },
+    'foto-perfil': () => {
+      const tem = !!((estado.perfil || {}).foto);
+      const f = abrirFolha(`
+        <h2>Foto de perfil</h2>
+        <div class="foto-previa">${avatarHtml((estado.perfil || {}).foto, (estado.perfil || {}).nome, 'grande')}</div>
+        <p class="mudo peq">Escolha uma foto da galeria ou tire uma agora. Ela é cortada em quadrado e fica só na sua conta.</p>
+        <p class="erro" data-erro role="alert"></p>
+        <div class="linha-botoes"><button class="btn" type="button" data-ed="escolher">${tem ? 'Trocar foto' : 'Escolher foto'}</button>${tem ? '<button class="btn perigo-claro" type="button" data-ed="remover">Remover</button>' : ''}<button class="btn secundario" type="button" data-fechar>Cancelar</button></div>`);
+      f.el.addEventListener('click', (e) => {
+        if (e.target.closest('[data-ed="remover"]')) { salvarPerfil(estado.uid, { foto: null }, { merge: true }); f.fechar(); toast('Foto removida.'); return; }
+        if (!e.target.closest('[data-ed="escolher"]')) return;
+        const entrada = document.createElement('input');
+        entrada.type = 'file'; entrada.accept = 'image/*';
+        entrada.addEventListener('change', async () => {
+          const arq = entrada.files && entrada.files[0];
+          if (!arq) return;
+          try {
+            const foto = await reduzirFoto(arq);
+            await salvarPerfil(estado.uid, { foto }, { merge: true });
+            f.fechar(); toast('Foto atualizada.');
+          } catch (err) {
+            console.error(err);
+            const el = f.el.querySelector('[data-erro]'); if (el) el.textContent = 'Não consegui usar essa imagem. Tente outra.';
+          }
+        });
+        entrada.click();
+      });
+    },
     'perfil-nome': () => {
       const f = abrirFolha(`
         <h2>Seu nome</h2>
@@ -206,6 +332,7 @@ export const contaTela = {
         f.fechar();
       });
     },
+    'meta-editar': (el) => abrirMeta(el.dataset.meta),
     'metas-editar': () => {
       const f = abrirFolha(`
         <h2>Minhas metas</h2>

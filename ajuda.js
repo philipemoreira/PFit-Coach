@@ -47,7 +47,7 @@ const PASSOS = [
   ['👋', 'Bem-vindo ao Treino', 'Treino, dieta e progresso num lugar só, simples de usar no celular e no computador.'],
   ['🏋️', 'Treine sem complicação', 'Abra a aba Hoje, toque em Começar, marque as séries e deixe o descanso por conta do app. Ele guarda suas cargas e mostra quando você bate um recorde.'],
   ['🍎', 'Dieta, água e calorias', 'Marque o que comeu da lista da dieta, anote a água. Defina metas em Configurações e acompanhe tudo em Progresso.'],
-  ['🤝', 'Tem um personal?', 'Em Minha conta (toque na sua inicial, no topo), digite o código que ele te passou. Ele monta seu treino e sua dieta, e você só executa.']
+  ['🤝', 'Tem um personal?', 'Em Minha conta (toque na engrenagem, no topo), digite o código que ele te passou. Ele monta seu treino e sua dieta, e você só executa.']
 ];
 
 export function abrirBoasVindas(marcar = true) {

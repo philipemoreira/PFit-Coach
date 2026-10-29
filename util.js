@@ -77,3 +77,26 @@ export function segundaDaSemana(d = new Date()) {
   x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
   return x;
 }
+
+// Foto de perfil (guardada como texto pequeno no perfil) ou a inicial do nome.
+export function avatarHtml(foto, nome, classe = '') {
+  const ini = escaparHtml(String(nome || '?').trim().charAt(0).toUpperCase() || '?');
+  if (typeof foto === 'string' && foto.startsWith('data:image/')) {
+    return `<div class="avatar com-foto ${classe}" aria-hidden="true"><img src="${foto}" alt=""></div>`;
+  }
+  return `<div class="avatar ${classe}" aria-hidden="true">${ini}</div>`;
+}
+
+// Reduz a foto escolhida para um quadrado pequeno (cortando o centro) e devolve texto (JPEG). Fica leve para guardar.
+export async function reduzirFoto(arquivo, lado = 320) {
+  const url = URL.createObjectURL(arquivo);
+  try {
+    const img = await new Promise((ok, erro) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => erro(new Error('imagem')); i.src = url; });
+    const l = Math.min(img.naturalWidth, img.naturalHeight);
+    if (!l) throw new Error('imagem vazia');
+    const c = document.createElement('canvas'); c.width = lado; c.height = lado;
+    const g = c.getContext('2d');
+    g.drawImage(img, (img.naturalWidth - l) / 2, (img.naturalHeight - l) / 2, l, l, 0, 0, lado, lado);
+    return c.toDataURL('image/jpeg', 0.82);
+  } finally { URL.revokeObjectURL(url); }
+}

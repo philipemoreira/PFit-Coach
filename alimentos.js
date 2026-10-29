@@ -41,7 +41,7 @@ export function blocoMacros() {
   <section class="card">
     <div class="card-topo"><h2>Calorias e macros</h2></div>
     <p class="grande">${t.kcal.toLocaleString('pt-BR')} <small>kcal</small></p>
-    ${m.kcal ? `${barra(t.kcal, m.kcal)}<p class="mudo peq">Meta: ${m.kcal.toLocaleString('pt-BR')} kcal${t.kcal < m.kcal ? ` · faltam ${(m.kcal - t.kcal).toLocaleString('pt-BR')}` : ' · meta batida 🎉'}</p>` : '<p class="mudo peq">Sem meta de calorias. <button class="link" type="button" data-acao="metas-editar">Definir meta</button></p>'}
+    ${m.kcal ? `${barra(t.kcal, m.kcal)}<p class="mudo peq">Meta: ${m.kcal.toLocaleString('pt-BR')} kcal${t.kcal < m.kcal ? ` · faltam ${(m.kcal - t.kcal).toLocaleString('pt-BR')}` : ' · meta batida 🎉'}</p>` : `<p class="mudo peq">Sem meta de calorias. ${estado.vinculo ? '' : '<button class="link" type="button" data-acao="meta-editar" data-meta="kcal">Definir meta</button>'}</p>`}
     <div class="minimacros">${minimacro('Proteína', t.prot, m.prot)}${minimacro('Carbo', t.carb, m.carb)}${minimacro('Gordura', t.gord, m.gord)}</div>
     <div class="acoes-card linha">
       <button class="btn secundario" type="button" data-acao="comida-dia">Ver o dia</button>
