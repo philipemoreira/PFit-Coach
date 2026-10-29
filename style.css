@@ -1274,3 +1274,7 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 .conq-modal-lista { display: grid; gap: 8px; overflow-y: auto; flex: 1; min-height: 0; padding: 2px 2px 12px; }
 .folha-conq > .folha-corpo > .btn { margin-top: 8px; flex: none; }
 @media (min-width: 900px) { .folha-conq { max-width: 760px; height: 80vh; } .conq-modal-lista { grid-template-columns: repeat(2, 1fr); } }
+
+/* v36: nome da marca */
+.entrada-marca .marca-nome { display: block; font-family: var(--fonte-titulo); font-size: 22px; letter-spacing: -.5px; margin: 8px 0 14px; }
+.nav-marca b, .topbar-marca b { white-space: nowrap; }

@@ -20,11 +20,11 @@ async function baixarBackup() {
     const listas = await Promise.all(COLECOES.map((c) => lerTudo(estado.uid, c)));
     const dados = { app: 'treino', versao: 1, exportadoEm: new Date().toISOString() };
     COLECOES.forEach((c, i) => { dados[c] = listas[i]; });
-    const nome = `backup-treino-${dataLocal()}.json`;
+    const nome = `backup-pfit-coach-${dataLocal()}.json`;
     const arquivo = new File([JSON.stringify(dados, null, 2)], nome, { type: 'application/json' });
     // No iPhone, o jeito mais fácil é abrir o menu de compartilhar e escolher "Salvar em Arquivos".
     if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
-      try { await navigator.share({ files: [arquivo], title: 'Backup do Treino' }); return; } catch (e) {
+      try { await navigator.share({ files: [arquivo], title: 'Backup do PFit Coach' }); return; } catch (e) {
         if (e && e.name === 'AbortError') return;
       }
     }
@@ -44,7 +44,7 @@ async function restaurarBackup(arquivo) {
   try {
     dados = JSON.parse(await arquivo.text());
   } catch { return toast('Esse arquivo não é um backup válido.'); }
-  if (!dados || dados.app !== 'treino') return toast('Esse arquivo não é um backup do Treino.');
+  if (!dados || dados.app !== 'treino') return toast('Esse arquivo não é um backup do PFit Coach.');
   const listas = {};
   // Quem tem personal não pode mexer no treino e na dieta (o personal é quem monta).
   const COLS = estado.vinculo ? COLECOES.filter((c) => c !== 'treinos' && c !== 'regras' && c !== 'dietaItens') : COLECOES;
@@ -238,7 +238,7 @@ export const contaTela = {
     <section class="secao">
       <button class="btn perigo-claro cheio" type="button" data-acao="sair">Sair da conta</button>
     </section>
-    <p class="aviso-rodape">Treino · versão 1</p>`;
+    <p class="aviso-rodape">PFit Coach · versão 1</p>`;
   },
   acoes: {
     privacidade: () => abrirPrivacidade(),
@@ -429,7 +429,7 @@ export const configTela = {
         ${linha('conta-excluir', 'Excluir minha conta', 'Apaga a conta e todos os dados para sempre', '', 'perigo')}
       </div>
     </section>
-    <p class="aviso-rodape">Treino · versão 1</p>`;
+    <p class="aviso-rodape">PFit Coach · versão 1</p>`;
   },
   mudancas: {
     'backup-arquivo': (el) => {

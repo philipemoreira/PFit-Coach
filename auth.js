@@ -101,7 +101,7 @@ function htmlPassoTipo() {
   return `
       <div class="logo-grande">${LOGO}</div>
       <h1>Criar conta</h1>
-      <p class="sub">Como você vai usar o Treino?</p>
+      <p class="sub">Como você vai usar o PFit Coach?</p>
       <div class="tipos">
         ${Object.entries(TIPOS).map(([id, t]) => `
         <button type="button" class="tipo-card" data-acao="cad-tipo" data-tipo="${id}">
@@ -175,6 +175,7 @@ async function ligarAoPersonal(uid, nome, email) {
 const painelMarca = `
   <aside class="entrada-marca">
     <div class="logo-pequeno">${LOGO}</div>
+    <strong class="marca-nome">PFit Coach</strong>
     <h2>Treino e dieta,<br>num lugar só.</h2>
     <ul>
       <li>Treinos com séries, cargas e descanso</li>

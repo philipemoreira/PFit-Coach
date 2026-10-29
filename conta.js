@@ -38,7 +38,7 @@ export function abrirTermos() {
     <div class="texto-legal">
       <p class="mudo peq">Modelo em linguagem simples. Precisa ser revisado por um profissional antes de o app ser aberto ao público.</p>
       <h3>O que é o app</h3>
-      <p>O Treino ajuda você a organizar treinos, dieta e acompanhamento do seu progresso, sozinho ou com um personal.</p>
+      <p>O PFit Coach ajuda você a organizar treinos, dieta e acompanhamento do seu progresso, sozinho ou com um personal.</p>
       <h3>Sua conta</h3>
       <p>Você é responsável por manter sua senha em segurança e por informar dados verdadeiros. Cada conta é pessoal.</p>
       <h3>Assinatura</h3>

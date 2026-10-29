@@ -1,7 +1,7 @@
 {
   "id": "./index.html",
-  "name": "Treino",
-  "short_name": "Treino",
+  "name": "PFit Coach",
+  "short_name": "PFit Coach",
   "description": "Treinos e dieta num lugar só.",
   "start_url": "./index.html",
   "scope": "./",
