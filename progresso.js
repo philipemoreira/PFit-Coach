@@ -275,14 +275,15 @@ function barraConquista(c, grande = false) {
   return `<span class="conq-trilho ${grande ? 'grande' : ''}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.floor(pct)}" aria-label="Progresso: ${escaparHtml(c.nome)}"><i style="width:${pct.toFixed(1)}%"></i></span>`;
 }
 
-function linhaConquista(c) {
+function linhaConquista(c, extra = '') {
   const pct = Math.floor(percentualConquista(c));
-  return `<button type="button" class="conq-lin" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}">
-    <span class="conq-ico" aria-hidden="true">${c.icone}</span>
-    <span class="conq-corpo">
+  return `<button type="button" class="conq-lin ${extra}" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}">
+    <span class="conq-topo">
+      <span class="conq-ico" aria-hidden="true">${c.icone}</span>
       <b>${escaparHtml(c.nome)}</b>
-      ${c.atual === null ? `<small class="mudo">${escaparHtml(c.desc)}</small>` : `${barraConquista(c)}<span class="conq-cont"><span>${escaparHtml(textoProgresso(c))}</span><em>${pct}%</em></span>`}
+      ${c.atual === null ? '' : `<em class="conq-pct">${pct}%</em>`}
     </span>
+    ${c.atual === null ? `<small class="mudo">${escaparHtml(c.desc)}</small>` : `${barraConquista(c)}<span class="conq-cont"><span>${escaparHtml(textoProgresso(c))}</span></span>`}
   </button>`;
 }
 
@@ -292,12 +293,13 @@ function blocoConquistas() {
   const lista = conquistas();
   const feitas = lista.filter((c) => c.ok);
   const faltam = lista.filter((c) => !c.ok).sort((a, b) => percentualConquista(b) - percentualConquista(a));
-  const visiveis = conquistasTodas ? faltam : faltam.slice(0, 4);
+  const visiveis = conquistasTodas ? faltam : faltam.slice(0, 3);
   return `
-  <section class="card larga">
+  <section class="card conq-card">
+    <div class="card-topo"><h2>Conquistas</h2><span class="selo">${textoContagemConquistas()}</span></div>
     ${faltam.length ? `<h3 class="sub">Em andamento</h3>
-    <div class="conq-lista">${visiveis.map(linhaConquista).join('')}</div>
-    ${faltam.length > 4 ? `<button class="btn secundario cheio" type="button" data-acao="conquistas-todas">${conquistasTodas ? 'Mostrar menos' : `Ver mais (${faltam.length - 4})`}</button>` : ''}` : '<p class="mudo">Você conquistou tudo! 🏆</p>'}
+    <div class="conq-lista">${visiveis.map((c) => linhaConquista(c)).join('')}</div>
+    ${faltam.length > 3 ? `<button class="btn secundario cheio" type="button" data-acao="conquistas-todas">${conquistasTodas ? 'Mostrar menos' : `Ver mais (${faltam.length - 3})`}</button>` : ''}` : '<p class="mudo">Você conquistou tudo! 🏆</p>'}
     ${feitas.length ? `<h3 class="sub">Conquistadas</h3>
     <div class="conquistas">
       ${feitas.map((c) => `<button type="button" class="conquista ok" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}" aria-label="${escaparHtml(c.nome)}: conquistada"><span aria-hidden="true">${c.icone}</span><small>${escaparHtml(c.nome)}</small></button>`).join('')}
@@ -308,14 +310,14 @@ function blocoConquistas() {
 function blocoExercicio() {
   const lista = exerciciosComCarga();
   if (!lista.length) {
-    return `<section class="card larga"><h2>Carga por exercício</h2><p class="mudo vazio-grafico">Quando você terminar treinos com carga marcada, a evolução de cada exercício aparece aqui.</p></section>`;
+    return `<section class="card"><h2>Carga por exercício</h2><p class="mudo vazio-grafico">Quando você terminar treinos com carga marcada, a evolução de cada exercício aparece aqui.</p></section>`;
   }
   if (!lista.some(([k]) => k === exercicioEscolhido)) exercicioEscolhido = lista[0][0];
   const pontos = pontosExercicio(exercicioEscolhido);
   const melhor = pontos.length ? Math.max(...pontos.map((p) => p.v)) : null;
   const ultimo = pontos.length ? pontos[pontos.length - 1].v : null;
   return `
-  <section class="card larga cal-card">
+  <section class="card ex-card">
     <div class="cal-info">
       <h2>Carga por exercício</h2>
       <label class="campo sem-margem">
@@ -356,13 +358,12 @@ export const progresso = {
     ${blocoResumo()}
     ${secao('Treinos')}
     <div class="grade-cards">${blocoCalendario()}${blocoVolume()}</div>
-    <div class="grade-cards">${blocoGrupos()}${blocoExercicio()}</div>
+    <div class="grade-cards">${blocoGrupos()}</div>
+    <div class="grade-cards">${blocoExercicio()}${blocoConquistas()}</div>
     ${secao('Corpo')}
     <div class="grade-cards corpo">${blocoPeso()}${blocoMedidas()}${blocoFotos()}</div>
     ${secao('Alimentação')}
     <div class="grade-cards">${blocoCalorias()}</div>
-    ${secao('Conquistas', textoContagemConquistas())}
-    <div class="grade-cards">${blocoConquistas()}</div>
     ${secao('Últimos treinos')}
     ${blocoHistorico()}`;
   },

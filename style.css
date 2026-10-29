@@ -1106,7 +1106,7 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 
 /* ---------- Conquistas com barra de progresso ---------- */
 .conq-lista { display: grid; gap: 10px; margin: 8px 0 14px; }
-.conq-lin { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 18px; border: 1px solid var(--borda); background: var(--card2); color: var(--texto); font-family: inherit; }
+.conq-lin { display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 10px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 18px; border: 1px solid var(--borda); background: var(--card2); color: var(--texto); font-family: inherit; }
 .conq-ico { flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: var(--card); font-size: 24px; }
 .conq-corpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .conq-corpo b { font-size: 15px; }
@@ -1155,3 +1155,14 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
   .recolhivel:not(.aberta) > :first-child > :nth-last-child(1 of :not(.rc-extra)) { border-bottom: 0; }
 }
 @media (min-width: 900px) { .recolhivel .rc-btn { display: none; } }
+
+/* Conquistas ao lado da carga por exercício (v28) */
+.conq-topo { display: flex; align-items: center; gap: 12px; }
+.conq-topo b { flex: 1; min-width: 0; font-size: 15px; }
+.conq-pct { font-style: normal; font-weight: 800; font-size: 16px; color: var(--destaque); font-variant-numeric: tabular-nums; }
+.conq-lin .conq-cont { justify-content: flex-start; }
+.conq-lin { padding: 12px 14px; }
+.ex-card .grafico { max-height: 220px; }
+.ex-card select { width: 100%; }
+@media (min-width: 900px) { .conq-card .conquistas { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); } }
+@media (min-width: 900px) { .conq-card .conq-lista { grid-template-columns: 1fr; } }
