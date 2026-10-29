@@ -9,6 +9,7 @@ import { treinos } from './treinos.js';
 import { dieta } from './dieta.js';
 import { progresso } from './progresso.js';
 import { estatisticas } from './estatisticas.js';
+import { historico } from './historico.js';
 import { contaTela, configTela } from './perfil.js';
 import { personal, pararPersonal } from './personal.js';
 import { acoesRecados } from './recados.js';
@@ -40,7 +41,8 @@ const ABAS = [
 const EXTRAS = [
   { id: 'conta', nome: 'Minha conta', tela: contaTela },
   { id: 'config', nome: 'Configurações', tela: configTela },
-  { id: 'stats', nome: 'Estatísticas', tela: estatisticas, pai: 'progresso' }
+  { id: 'stats', nome: 'Estatísticas', tela: estatisticas, pai: 'progresso' },
+  { id: 'historico', nome: 'Histórico de treinos', tela: historico, pai: 'progresso' }
 ];
 const TELAS = [...ABAS, ...EXTRAS];
 const ehExtra = (id) => EXTRAS.some((e) => e.id === id);

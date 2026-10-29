@@ -1,6 +1,6 @@
 // Guarda os arquivos do app no aparelho para ele abrir rápido e funcionar sem internet.
 // Toda vez que eu mudar o app, o número da versão sobe (NOME_DO_CACHE).
-const NOME_DO_CACHE = 'treino-v28';
+const NOME_DO_CACHE = 'treino-v29';
 
 const ARQUIVOS_ESSENCIAIS = [
   './', './index.html', './style.css', './manifest.json',
@@ -9,7 +9,7 @@ const ARQUIVOS_ESSENCIAIS = [
   './exercicios-base.js',
   './alimentos.js',
   './fotos.js',
-  './conta.js', './assinatura.js', './ajuda.js', './onboarding.js', './vinculo.js', './dicas.js', './video.js', './dietaplano.js', './recolhivel.js', './estatisticas.js', './anilhas.js', './personal.js', './recados.js', './auth.js', './hoje.js', './treinos.js', './treinar.js',
+  './conta.js', './assinatura.js', './ajuda.js', './onboarding.js', './vinculo.js', './dicas.js', './video.js', './dietaplano.js', './recolhivel.js', './estatisticas.js', './historico.js', './anilhas.js', './personal.js', './recados.js', './auth.js', './hoje.js', './treinos.js', './treinar.js',
   './dieta.js', './progresso.js', './perfil.js',
   './icones/icone.svg', './icones/icone-180.png', './icones/icone-192.png', './icones/icone-512.png'
 ];

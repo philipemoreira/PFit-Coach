@@ -12,7 +12,8 @@ import { todosOsNomes } from './exercicios-base.js';
 function chipsDias(dias = []) {
   if (!dias.length) return '';
   const ord = ORDEM_DIAS.filter((d) => dias.includes(d));
-  return `<div class="chips">${ord.map((d) => `<span class="chip">${DIAS_CURTOS[d]}</span>`).join('')}</div>`;
+  const hoje = new Date().getDay();
+  return `<div class="chips dias-treino">${ord.map((d) => `<span class="chip dia-tag ${d === hoje ? 'hoje' : ''}">${DIAS_CURTOS[d]}</span>`).join('')}</div>`;
 }
 
 const comPersonal = () => !!estado.vinculo;
@@ -20,15 +21,17 @@ const comPersonal = () => !!estado.vinculo;
 function cardTreino(t) {
   const exs = t.exercicios || [];
   const previa = exs.slice(0, 3).map((e) => escaparHtml(e.nome)).join(' · ');
+  const eHoje = (t.dias || []).includes(new Date().getDay());
   return `
-  <section class="card">
+  <section class="card treino-card ${eHoje ? 'e-hoje' : ''}">
     <div class="card-topo">
       <div>
         <h2>${escaparHtml(t.nome)}</h2>
         <p class="mudo peq">${exs.length} exercício${exs.length === 1 ? '' : 's'}</p>
       </div>
+      ${eHoje ? '<span class="selo">É hoje</span>' : ''}
     </div>
-    ${chipsDias(t.dias)}
+    ${chipsDias(t.dias) || '<p class="mudo peq">Sem dia marcado</p>'}
     ${previa ? `<p class="previa">${previa}${exs.length > 3 ? ' …' : ''}</p>` : ''}
  <div class="linha-botoes">
       ${comPersonal() ? '' : `<button class="btn secundario" type="button" data-acao="treino-editar" data-id="${escaparHtml(t.id)}">Editar</button>`}
@@ -204,7 +207,8 @@ export function abrirEditorTreino(treino, opcoes = {}) {
 
 export const treinos = {
   render() {
-    const lista = estado.treinos.map(cardTreino).join('');
+    const hojeN = new Date().getDay();
+    const lista = [...estado.treinos].sort((a, b) => Number((b.dias || []).includes(hojeN)) - Number((a.dias || []).includes(hojeN))).map(cardTreino).join('');
     const nomePersonal = estado.vinculo ? escaparHtml(estado.vinculo.personalNome || 'seu personal') : '';
     return `
     <header class="topo"><h1>Treinos</h1><div class="topo-acoes"><button class="btn pequeno secundario" type="button" data-acao="anilhas-abrir">Anilhas</button>${comPersonal() ? '' : '<button class="btn pequeno" type="button" data-acao="treino-novo">+ Novo</button>'}</div></header>

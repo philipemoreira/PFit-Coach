@@ -1111,7 +1111,7 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 .conq-corpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .conq-corpo b { font-size: 15px; }
 .conq-trilho { display: block; height: 8px; border-radius: 8px; background: var(--card); overflow: hidden; border: 1px solid var(--borda); }
-.conq-trilho i { display: block; height: 100%; border-radius: 8px; background: var(--limao); min-width: 2px; transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.conq-trilho i { display: block; height: 100%; border-radius: 8px; background: var(--limao); transition: width .6s cubic-bezier(.2,.8,.2,1); }
 .conq-trilho.grande { height: 14px; margin: 14px 0 8px; }
 .conq-cont { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--mudo); font-variant-numeric: tabular-nums; }
 .conq-cont em { font-style: normal; font-weight: 800; color: var(--destaque); }
@@ -1166,3 +1166,60 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 .ex-card select { width: 100%; }
 @media (min-width: 900px) { .conq-card .conquistas { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); } }
 @media (min-width: 900px) { .conq-card .conq-lista { grid-template-columns: 1fr; } }
+
+/* v29 — compactação e novos blocos */
+/* Estatísticas: gráfico menor */
+.g-evol { max-height: 150px; display: block; margin: 4px auto; }
+/* Hoje: volume ao lado da água */
+.volume-hoje .volume-num { font-size: clamp(32px, 6vw, 44px); margin: 2px 0 4px; }
+.volume-hoje .btn.cheio { margin-top: 10px; }
+/* Progresso compacto */
+.prog-compacto .card { padding: 14px; }
+.prog-compacto .grade-cards { gap: 10px; }
+.prog-compacto .grade-cards > .card { margin-bottom: 10px; }
+.prog-compacto .card-topo { margin-bottom: 6px; }
+.prog-compacto .grafico { max-height: 150px; margin: 2px auto; }
+.prog-compacto .grande, .prog-compacto .stat-num { font-size: 30px; }
+.prog-compacto .vazio-grafico { min-height: 70px; }
+.prog-compacto .prog-sec { margin: 14px 0 8px; }
+/* Conquistas bem compactas */
+.conq-card .conq-lista { gap: 6px; margin: 4px 0 8px; }
+.conq-lin { padding: 8px 10px !important; gap: 6px !important; border-radius: 14px; }
+.conq-topo { gap: 10px; }
+.conq-ico { width: 32px !important; height: 32px !important; border-radius: 10px !important; font-size: 17px !important; }
+.conq-nome { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.conq-nome b { font-size: 13px; }
+.conq-nome small { font-size: 11px; color: var(--mudo); font-variant-numeric: tabular-nums; }
+.conq-pct { font-size: 14px !important; }
+.conq-lin .conq-trilho { height: 5px; }
+.conq-card .conquista { min-height: 64px; padding: 8px 4px; gap: 2px; border-radius: 12px; }
+.conq-card .conquista span { font-size: 20px; }
+.conq-card .conquista small { font-size: 10px; }
+.conq-card .conquistas { grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
+.conq-card h3.sub { margin: 6px 0 4px; font-size: 13px; }
+/* Histórico */
+.hist-lista { display: grid; gap: 6px; margin-bottom: 10px; }
+.hist-lin { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 8px 10px; border-radius: 14px; border: 1px solid var(--borda); background: var(--card2); color: var(--texto); font-family: inherit; }
+.hist-dia { flex: none; width: 42px; display: grid; justify-items: center; line-height: 1.1; padding: 4px 0; border-radius: 10px; background: var(--card); }
+.hist-dia small { font-size: 10px; text-transform: uppercase; color: var(--mudo); font-weight: 700; }
+.hist-dia b { font-size: 17px; }
+.hist-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hist-info b { font-size: 14px; }
+.hist-info small { font-size: 11px; color: var(--mudo); }
+.hist-kg { flex: none; font-weight: 800; font-size: 15px; color: var(--destaque); font-variant-numeric: tabular-nums; }
+.hist-kg small { font-size: 11px; color: var(--mudo); font-weight: 600; }
+.hist-card .hist-lista { margin-bottom: 10px; }
+.hist-mes .hist-lista { margin-bottom: 0; }
+.hist-resumo { margin: 0 4px 12px; }
+@media (min-width: 900px) { .hist-mes .hist-lista { grid-template-columns: repeat(2, 1fr); } }
+/* Treinos: dia da semana em destaque */
+.dias-treino { gap: 6px; margin: 6px 0 8px; }
+.chip.dia-tag { font-size: 13px; font-weight: 800; padding: 6px 12px; border-radius: 10px; background: var(--selo-bg); color: var(--destaque); border: 1px solid var(--destaque); letter-spacing: .3px; }
+.chip.dia-tag.hoje { background: var(--destaque); color: var(--card); }
+.treino-card { border-left: 4px solid var(--borda); }
+.treino-card.e-hoje { border-left-color: var(--destaque); box-shadow: 0 0 0 1px var(--destaque) inset; }
+
+/* Conquista feita: bloco verde com check */
+.conq-lin.feita { background: var(--selo-bg); border-color: var(--destaque); }
+.conq-lin.feita .conq-ico { background: rgba(198, 244, 50, .18); }
+.conq-check { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--destaque); color: var(--card); font-weight: 900; font-size: 14px; }

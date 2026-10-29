@@ -34,7 +34,7 @@ function cartao(rotulo, valor, sub, destaque = false) {
 }
 
 function grafico(lista, rotulo, meta) {
-  const W = 340; const H = 176; const base = H - 20; const topo = 18;
+  const W = 340; const H = 128; const base = H - 20; const topo = 18;
   const max = Math.max(1, meta || 0, ...lista.map((x) => x.v));
   const larg = (W - 8) / lista.length;
   const passo = visao === 'semanas' ? 3 : 1; // semanas: um rótulo a cada 3 barras (11 é a última; a atual sempre aparece)
@@ -45,7 +45,7 @@ function grafico(lista, rotulo, meta) {
       + (x.v ? `<text x="${cx.toFixed(1)}" y="${base - h - 4}" text-anchor="middle" class="g-valor">${compacto(x.v)}</text>` : '')
       + (i % passo === 0 || x.atual ? `<text x="${cx.toFixed(1)}" y="${H - 5}" text-anchor="middle" class="g-rot">${rotulo(x)}</text>` : '');
   }).join('');
-  return `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Kg levantados por ${visao === 'semanas' ? 'semana, nas últimas 12 semanas' : 'mês, nos últimos 12 meses'}">${barras}</svg>`;
+  return `<svg class="grafico g-evol" viewBox="0 0 ${W} ${H}" role="img" aria-label="Kg levantados por ${visao === 'semanas' ? 'semana, nas últimas 12 semanas' : 'mês, nos últimos 12 meses'}">${barras}</svg>`;
 }
 
 function linhaRecorde(icone, rotulo, valor, detalhe) {

@@ -107,12 +107,12 @@ function blocoVolumeHoje() {
   const vol = volumeDoDia(dataLocal());
   const mv = metaVolume();
   return `
-  <section class="card larga volume-hoje">
+  <section class="card volume-hoje">
     <div class="card-topo"><h2>Volume de hoje</h2>${mv && vol >= mv ? '<span class="selo">meta batida 🎉</span>' : ''}</div>
     <p class="volume-num">${Math.round(vol).toLocaleString('pt-BR')} <small>kg levantados</small></p>
     ${mv ? `${barra(vol, mv)}<p class="mudo peq">Meta do dia: ${formatarVolume(mv)}${vol < mv ? ` · faltam ${formatarVolume(mv - vol)}` : ''}</p>`
     : '<p class="mudo peq">Soma de carga × repetições dos seus treinos de hoje. <button class="link" type="button" data-acao="metas-editar">Definir meta</button></p>'}
-    <button class="btn secundario cheio" type="button" data-acao="stats-abrir">Ver estatísticas completas ›</button>
+    <button class="btn secundario cheio pequeno" type="button" data-acao="stats-abrir">Ver estatísticas ›</button>
   </section>`;
 }
 

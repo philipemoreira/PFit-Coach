@@ -11,6 +11,7 @@ import { totaisDoDia } from './alimentos.js';
 import { abrirFotos } from './fotos.js';
 import { cumprimento as cumprimentoPlano } from './dietaplano.js';
 import { listaRecolhivel } from './recolhivel.js';
+import { linhaSessao } from './historico.js';
 import { volumeSessao, volumeDoDia, metaVolume, metaPeso, sequenciaSemanas, formatarVolume, conquistas, metaMacros, textoProgresso, percentualConquista } from './metricas.js';
 
 let exercicioEscolhido = '';
@@ -271,19 +272,29 @@ function blocoMedidas() {
 }
 
 function barraConquista(c, grande = false) {
-  const pct = percentualConquista(c);
+  const real = percentualConquista(c);
+  const pct = Math.floor(real) < 1 ? 0 : real; // sem progresso (0%) = barra totalmente vazia
   return `<span class="conq-trilho ${grande ? 'grande' : ''}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.floor(pct)}" aria-label="Progresso: ${escaparHtml(c.nome)}"><i style="width:${pct.toFixed(1)}%"></i></span>`;
 }
 
-function linhaConquista(c, extra = '') {
+function linhaConquista(c) {
   const pct = Math.floor(percentualConquista(c));
-  return `<button type="button" class="conq-lin ${extra}" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}">
+  if (c.ok) {
+    return `<button type="button" class="conq-lin feita" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}">
+      <span class="conq-topo">
+        <span class="conq-ico" aria-hidden="true">${c.icone}</span>
+        <span class="conq-nome"><b>${escaparHtml(c.nome)}</b><small>Conquistada</small></span>
+        <span class="conq-check" aria-label="Conquistada">✓</span>
+      </span>
+    </button>`;
+  }
+  return `<button type="button" class="conq-lin" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}">
     <span class="conq-topo">
       <span class="conq-ico" aria-hidden="true">${c.icone}</span>
-      <b>${escaparHtml(c.nome)}</b>
+      <span class="conq-nome"><b>${escaparHtml(c.nome)}</b><small>${c.atual === null ? escaparHtml(c.desc) : escaparHtml(textoProgresso(c))}</small></span>
       ${c.atual === null ? '' : `<em class="conq-pct">${pct}%</em>`}
     </span>
-    ${c.atual === null ? `<small class="mudo">${escaparHtml(c.desc)}</small>` : `${barraConquista(c)}<span class="conq-cont"><span>${escaparHtml(textoProgresso(c))}</span></span>`}
+    ${c.atual === null ? '' : barraConquista(c)}
   </button>`;
 }
 
@@ -291,19 +302,15 @@ const textoContagemConquistas = () => { const l = conquistas(); return `${l.filt
 
 function blocoConquistas() {
   const lista = conquistas();
-  const feitas = lista.filter((c) => c.ok);
   const faltam = lista.filter((c) => !c.ok).sort((a, b) => percentualConquista(b) - percentualConquista(a));
-  const visiveis = conquistasTodas ? faltam : faltam.slice(0, 3);
+  const feitas = lista.filter((c) => c.ok);
+  const todas = [...faltam, ...feitas]; // as conquistadas (verdes) vêm depois das que estão em andamento
+  const visiveis = conquistasTodas ? todas : todas.slice(0, 3);
   return `
   <section class="card conq-card">
     <div class="card-topo"><h2>Conquistas</h2><span class="selo">${textoContagemConquistas()}</span></div>
-    ${faltam.length ? `<h3 class="sub">Em andamento</h3>
-    <div class="conq-lista">${visiveis.map((c) => linhaConquista(c)).join('')}</div>
-    ${faltam.length > 3 ? `<button class="btn secundario cheio" type="button" data-acao="conquistas-todas">${conquistasTodas ? 'Mostrar menos' : `Ver mais (${faltam.length - 3})`}</button>` : ''}` : '<p class="mudo">Você conquistou tudo! 🏆</p>'}
-    ${feitas.length ? `<h3 class="sub">Conquistadas</h3>
-    <div class="conquistas">
-      ${feitas.map((c) => `<button type="button" class="conquista ok" data-acao="conquista-ver" data-n="${escaparHtml(c.nome)}" aria-label="${escaparHtml(c.nome)}: conquistada"><span aria-hidden="true">${c.icone}</span><small>${escaparHtml(c.nome)}</small></button>`).join('')}
-    </div>` : ''}
+    <div class="conq-lista">${visiveis.map(linhaConquista).join('')}</div>
+    ${todas.length > 3 ? `<button class="btn secundario cheio" type="button" data-acao="conquistas-todas">${conquistasTodas ? 'Mostrar menos' : `Ver mais (${todas.length - 3})`}</button>` : ''}
   </section>`;
 }
 
@@ -332,20 +339,12 @@ function blocoExercicio() {
 }
 
 function blocoHistorico() {
-  const lista = [...estado.sessoes]
-    .sort((a, b) => String(b.fim || b.data).localeCompare(String(a.fim || a.data)))
-    .slice(0, 10);
-  if (!lista.length) return `<section class="card"><p class="mudo">Seus treinos feitos aparecem aqui.</p></section>`;
+  const todas = [...estado.sessoes].sort((a, b) => String(b.fim || b.data).localeCompare(String(a.fim || a.data)));
+  if (!todas.length) return `<section class="card"><p class="mudo">Seus treinos feitos aparecem aqui.</p></section>`;
   return `
-  <section class="card">
-    ${listaRecolhivel('historico', lista.map((s) => {
-        const feitas = (s.exercicios || []).reduce((n, e) => n + (e.series || []).filter((x) => x.feito).length, 0);
-        const cardioMin = (s.exercicios || []).reduce((n, e) => n + (e.cardio && e.feito && e.minutos ? e.minutos : 0), 0);
-        return `<button type="button" class="regra-linha" data-acao="sessao-ver" data-id="${escaparHtml(s.id)}">
-          <small class="hora">${formatarDataCurta(s.data)}</small>
-          <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${feitas || !cardioMin ? `${feitas} ${feitas === 1 ? 'série' : 'séries'}` : ''}${cardioMin ? `${feitas ? ' · ' : ''}cardio ${formatarNumero(cardioMin)} min` : ''}${s.duracaoMin ? ` · ${s.duracaoMin} min` : ''} ${volumeSessao(s) > 0 || !cardioMin ? ` · ${Math.round(volumeSessao(s)).toLocaleString('pt-BR')} kg` : ''}${(s.recordes || []).length ? ' · 🏆' : ''}</small></span>
-          <span class="seta" aria-hidden="true">›</span></button>`;
-      }))}
+  <section class="card hist-card">
+    <div class="hist-lista">${todas.slice(0, 4).map(linhaSessao).join('')}</div>
+    <button class="btn secundario cheio" type="button" data-acao="historico-abrir">Ver todos os treinos${todas.length > 4 ? ` (${todas.length})` : ''} ›</button>
   </section>`;
 }
 
@@ -353,7 +352,7 @@ const secao = (titulo, sub = '') => `<div class="prog-sec"><h2>${titulo}</h2>${s
 
 export const progresso = {
   render() {
-    return `
+    return `<div class="prog-compacto">
     <header class="topo topo-prog"><h1>Progresso</h1><button class="btn pequeno secundario" type="button" data-acao="stats-abrir">Estatísticas ›</button></header>
     ${blocoResumo()}
     ${secao('Treinos')}
@@ -365,7 +364,7 @@ export const progresso = {
     ${secao('Alimentação')}
     <div class="grade-cards">${blocoCalorias()}</div>
     ${secao('Últimos treinos')}
-    ${blocoHistorico()}`;
+    ${blocoHistorico()}</div>`;
   },
   mudancas: {
     'prog-exercicio': (el) => {
