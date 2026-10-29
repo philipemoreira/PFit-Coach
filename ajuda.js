@@ -6,7 +6,7 @@ import { salvarPerfil } from './dados.js';
 
 // Preencha para aparecer o botão "Falar com o suporte" (deixe vazio para esconder).
 export const SUPORTE_EMAIL = '';
-export const SUPORTE_WHATSAPP = ''; // só números com DDD, ex.: 5511999999999
+export const SUPORTE_WHATSAPP = '5544999215031'; // só números com DDD, ex.: 5511999999999
 
 export const temSuporte = () => !!(SUPORTE_EMAIL || SUPORTE_WHATSAPP);
 

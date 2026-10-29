@@ -6,7 +6,7 @@ import { toast } from './util.js';
 import { apagarSubcolecao, apagarPerfil, removerGlobal } from './dados.js';
 
 // Se quiser mostrar um contato de privacidade no app, escreva aqui (ex.: um e-mail). Vazio = não mostra.
-const CONTATO = '';
+const CONTATO = 'WhatsApp (44) 99921-5031';
 
 const SUBCOLECOES = ['treinos', 'regras', 'dietaItens', 'checks', 'sessoes', 'peso', 'agua', 'medidas', 'recados', 'modelos', 'alimentos', 'refeicoes', 'fotos', 'config'];
 
