@@ -1,4 +1,5 @@
 // Aba Dieta: uma lista fixa por refeição, igual todos os dias. A pessoa só marca o que comeu e a quantidade.
+import { cartaoArquivosAluno, abrirArquivoDieta } from './dietaarquivo.js';
 import { estado } from './estado.js';
 import { contar } from './conquistas-personal.js';
 import { abrirFolha, confirmar } from './folha.js';
@@ -214,12 +215,14 @@ export const dieta = {
     return `
     <header class="topo"><h1>Dieta</h1>${podeEditar() && estado.dietaItens.length ? `<button class="btn pequeno ${edit ? '' : 'secundario'}" type="button" data-acao="dieta-modo-editar">${edit ? 'Pronto' : 'Editar lista'}</button>` : ''}</header>
     ${estado.vinculo ? `<p class="faixa-personal">Sua dieta é montada por <strong>${escaparHtml(estado.vinculo.personalNome || 'seu personal')}</strong>. Toque no quadrado quando comer o previsto; toque no nome para dizer outra quantidade.</p>` : '<p class="mudo peq margem-b">Sua lista é igual todos os dias. Toque no quadrado quando comer o previsto.</p>'}
+    ${cartaoArquivosAluno()}
     ${blocoRegistro({ edit })}
     ${blocoAlimentos()}
     <p class="aviso-rodape">Este app organiza a sua dieta, mas não substitui nutricionista nem médico.</p>`;
   },
   acoes: {
     ...acoesAlimentos,
+    'arq-abrir': (el) => { const m = estado.dietaArquivos.find((x) => x.id === el.dataset.id); if (m) abrirArquivoDieta(estado.uid, m); },
     'comida-adicionar': () => abrirFora(),
     'dieta-fora': () => abrirFora(),
     'dieta-fora-remover': async (el) => { await gravarDia(itensDoDia().filter((i) => i.id !== el.dataset.id)); },

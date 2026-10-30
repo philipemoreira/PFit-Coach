@@ -58,7 +58,6 @@ function blocoExercicio(ex = {}) {
         <button type="button" data-mv="del" aria-label="Remover exercício" title="Remover">✕</button>
       </div>
     </div>
-    <label class="cardio-opcao"><input type="checkbox" data-f="cardio" ${ex.cardio ? 'checked' : ''}> Cardio (por tempo, sem séries)</label>
     <div class="so-cardio"><label>Minutos<input class="in" data-f="minutos" inputmode="numeric" value="${v(ex.minutos)}"></label></div>
     <div class="grade4">
       <label>Séries<input class="in" data-f="series" inputmode="numeric" placeholder="3" value="${v(ex.series)}"></label>
@@ -67,7 +66,8 @@ function blocoExercicio(ex = {}) {
       <label>Descanso (s)<input class="in" data-f="descanso" inputmode="numeric" placeholder="60" value="${v(ex.descanso)}"></label>
     </div>
     <details class="ex-mais" ${ex.obs || ex.video ? 'open' : ''}>
-      <summary>Observação e vídeo (opcional)</summary>
+      <summary>Mais opções (observação, vídeo, cardio)</summary>
+      <label class="cardio-opcao"><input type="checkbox" data-f="cardio" ${ex.cardio ? 'checked' : ''}> Cardio (por tempo, sem séries)</label>
       <input class="in" data-f="obs" placeholder="Observação (ex.: pegada fechada)" value="${v(ex.obs)}" maxlength="200">
       <input class="in so-forca" data-f="video" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Vídeo: link do YouTube ou videos/nome.mp4" value="${v(ex.video)}" maxlength="300">
     </details>

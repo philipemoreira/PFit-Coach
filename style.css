@@ -1413,3 +1413,14 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 .convite-linha{flex-wrap:wrap}
 .codigo-mini{font-size:22px;letter-spacing:3px}
 .convite-acoes{margin-left:auto}
+
+/* v47 dieta em arquivo */
+.arq-lin{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--borda)}
+.arq-ico{font-size:22px}
+.arq-txt{flex:1;min-width:0;display:grid;gap:2px}
+.arq-txt b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arq-txt small{font-size:12px}
+.arq-acoes{display:flex;gap:6px;flex-shrink:0}
+/* link com cara de botão (ex.: Falar com o suporte) */
+a.btn{display:flex;align-items:center;justify-content:center;box-sizing:border-box;text-decoration:none;text-align:center}
+a.btn.cheio{width:100%}

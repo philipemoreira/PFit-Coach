@@ -8,7 +8,7 @@ import { apagarSubcolecao, apagarPerfil, removerGlobal } from './dados.js';
 // Se quiser mostrar um contato de privacidade no app, escreva aqui (ex.: um e-mail). Vazio = não mostra.
 const CONTATO = 'WhatsApp (44) 99921-5031';
 
-const SUBCOLECOES = ['treinos', 'regras', 'dietaItens', 'checks', 'sessoes', 'peso', 'agua', 'medidas', 'recados', 'modelos', 'alimentos', 'refeicoes', 'fotos', 'config'];
+const SUBCOLECOES = ['treinos', 'regras', 'dietaItens', 'checks', 'sessoes', 'peso', 'agua', 'medidas', 'recados', 'modelos', 'alimentos', 'refeicoes', 'dietaArquivos', 'dietaPartes', 'fotos', 'config'];
 
 export function abrirPrivacidade() {
   abrirFolha(`

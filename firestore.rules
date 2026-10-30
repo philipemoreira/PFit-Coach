@@ -73,6 +73,18 @@ service cloud.firestore {
         allow delete: if (ehDono(userId) && !temPersonal(userId)) || ehPersonalDe(userId);
       }
 
+      // Dieta em arquivo (PDF/Word): o personal envia, o aluno lê (e pode apagar ao excluir a conta).
+      match /dietaArquivos/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow create, update: if ehPersonalDe(userId) && personalEmDia();
+        allow delete: if ehDono(userId) || ehPersonalDe(userId);
+      }
+      match /dietaPartes/{id} {
+        allow read: if ehDono(userId) || ehPersonalDe(userId);
+        allow create, update: if ehPersonalDe(userId) && personalEmDia();
+        allow delete: if ehDono(userId) || ehPersonalDe(userId);
+      }
+
       // Metas definidas pelo personal para o aluno.
       match /config/{id} {
         allow read: if ehDono(userId) || ehPersonalDe(userId);

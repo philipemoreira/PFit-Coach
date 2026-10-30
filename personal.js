@@ -17,6 +17,7 @@ import { avisoFaixa } from './assinatura.js';
 import { listaRecolhivel } from './recolhivel.js';
 import { resumoAnamnese } from './onboarding.js';
 import { abrirFotos } from './fotos.js';
+import { cartaoArquivosPersonal, abrirArquivoDieta, removerArquivoDieta, escolherEEnviar } from './dietaarquivo.js';
 import { contar, conquistasPersonal, cartaoConquistasPersonal, linhaConq, ordenar, folhaConquista } from './conquistas-personal.js';
 
 const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem letras que se confundem (0/O, 1/I)
@@ -32,7 +33,7 @@ const paradoresLista = {};
 let uidSync = null;
 
 function vazio() {
-  return { treinos: [], dietaItens: [], sessoes: [], peso: [], checks: [], medidas: [], recados: [], refeicoes: [], metas: null, perfilAluno: null };
+  return { treinos: [], dietaItens: [], sessoes: [], peso: [], checks: [], medidas: [], recados: [], refeicoes: [], dietaArquivos: [], metas: null, perfilAluno: null };
 }
 
 export function pararPersonal() {
@@ -95,6 +96,7 @@ function abrirDetalhe(uid) {
   ouvir('medidas', 'medidas', [orderBy('data', 'desc'), limit(30)]);
   ouvir('refeicoes', 'refeicoes', [orderBy('data', 'desc'), limit(14)]);
   ouvir('recados', 'recados', [orderBy('criadoEm', 'desc'), limit(40)]);
+  ouvir('dietaArquivos', 'dietaArquivos', [orderBy('criadoEm', 'desc'), limit(20)]);
   paradoresAluno.push(onSnapshot(doc(db, 'usuarios', uid), (snap) => {
     dados.perfilAluno = snap.exists() ? { ...snap.data() } : null;
     nav.renderizar();
@@ -312,6 +314,7 @@ function detalhe(v) {
       <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${s.duracaoMin ? s.duracaoMin + ' min · ' : ''}${Math.round(volumeSessao(s)).toLocaleString('pt-BR')} kg${(s.recordes || []).length ? ' · 🏆' : ''}${s.nota ? ' · 💬 tem anotação' : ''}</small></span><span class="seta" aria-hidden="true">›</span></button>`)) : '<p class="mudo">Nenhum treino feito ainda.</p>'}
   </section>` : ''}
   ${abaAluno === 'dieta' ? `<div class="grade-cards">
+    ${cartaoArquivosPersonal(dados.dietaArquivos)}
     <section class="card">
       <div class="card-topo"><h2>Dieta dele</h2><button class="btn pequeno" type="button" data-acao="p-dieta-item-novo">+ Item</button></div>
       <p class="mudo peq">Lista fixa, igual todos os dias. Ele só marca o que comeu.</p>
@@ -502,6 +505,9 @@ export const personal = {
         toast('Aluno removido.');
       } catch (e) { console.error(e); toast('Não consegui remover. Tente de novo.'); }
     },
+    'p-arq-enviar': () => { if (alunoAberto) escolherEEnviar(alunoAberto); },
+    'p-arq-ver': (el) => { const m = dados.dietaArquivos.find((x) => x.id === el.dataset.id); if (m && alunoAberto) abrirArquivoDieta(alunoAberto, m); },
+    'p-arq-remover': (el) => { const m = dados.dietaArquivos.find((x) => x.id === el.dataset.id); if (m && alunoAberto) removerArquivoDieta(alunoAberto, m); },
     'p-aba': (el) => { abaAluno = el.dataset.aba; nav.renderizar(); window.scrollTo(0, 0); },
     'p-modelos-abrir': () => abrirFolha(`${cartaoModelos()}<button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`, { classe: 'folha-alta' }),
     'pc-todas': () => {
