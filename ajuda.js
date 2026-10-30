@@ -1,4 +1,5 @@
 // Ajuda, boas-vindas e contato do suporte.
+import { abrirDadosIniciais } from './dadospersonal.js';
 import { estado } from './estado.js';
 import { abrirFolha } from './folha.js';
 import { escaparHtml } from './util.js';
@@ -83,6 +84,8 @@ export function abrirBoasVindas(marcar = true) {
   const terminar = () => {
     f.fechar();
     if (marcar && estado.uid) salvarPerfil(estado.uid, { viuBoasVindas: true }, { merge: true });
+    // Personal novo: pede os dados dele logo depois das boas-vindas (pode pular).
+    if (marcar && souPersonalAjuda() && estado.perfil && !estado.perfil.nascimento) setTimeout(abrirDadosIniciais, 250);
   };
   f.el.addEventListener('click', (e) => {
     const b = e.target.closest('[data-ed]');

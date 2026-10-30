@@ -17,6 +17,8 @@ const ms = (v) => {
   return Number.isFinite(t) ? t : 0;
 };
 const valida = (a) => !!a && ms(a.ate) > Date.now();
+// Assinatura "sem vencimento": você coloca uma data muito distante (ano 2090 ou depois) em assinaturas/{uid}.ate.
+const semFim = (t) => new Date(t).getFullYear() >= 2090;
 const dataBr = (t) => new Date(t).toLocaleDateString('pt-BR');
 
 export function faixaPorAlunos(n) {
@@ -111,6 +113,7 @@ export function resumoPlano() {
   if (a.estado === 'carregando') return null;
   if (a.origem === 'personal') return { sub: a.estado === 'ativo' ? 'Incluído no plano do seu personal' : 'Acesso pausado', venc: a.estado !== 'ativo' };
   if (a.estado === 'vencido') return { sub: 'Venceu · toque para renovar', venc: true };
+  if (semFim(a.ate)) return { sub: 'Plano ativo · sem vencimento', venc: false };
   return { sub: `${a.plano === 'teste' ? 'Teste grátis' : 'Plano ativo'} · ${a.dias} ${a.dias === 1 ? 'dia' : 'dias'} restantes`, venc: false };
 }
 
@@ -135,11 +138,11 @@ export function folhaPlanos() {
       planoCard('6 a 15 alunos', 'Para crescer', PRECOS.p15, marca('p15')),
       planoCard('16 alunos ou mais', 'Sem limite', PRECOS.ilimitado, marca('ilimitado'))].join('')
     : planoCard('Plano do aluno', 'Treino e dieta completos', PRECOS.aluno, marca('aluno'));
-  const pct = venc || a.origem !== 'proprio' ? 0 : Math.max(4, Math.min(100, (a.dias / DIAS_TESTE) * 100));
+  const pct = venc || a.origem !== 'proprio' ? 0 : (semFim(a.ate) ? 100 : Math.max(4, Math.min(100, (a.dias / DIAS_TESTE) * 100)));
   const status = a.origem === 'personal'
     ? `<div class="assin-status"><b>${venc ? 'Acesso pausado' : 'Incluído no plano do seu personal'}</b><small class="mudo">${venc ? 'Volta quando ele renovar.' : 'Você não paga nada.'}</small></div>`
-    : `<div class="assin-status"><div class="assin-topo"><b>${venc ? 'Seu acesso venceu' : (a.plano === 'teste' ? 'Teste grátis' : 'Plano ativo')}</b>${venc ? '' : `<span class="selo">${a.dias} ${a.dias === 1 ? 'dia' : 'dias'}</span>`}</div>
-      ${venc ? '' : `<small class="mudo">Vale até <strong>${dataBr(a.ate)}</strong></small><span class="assin-trilho" aria-hidden="true"><i style="width:${pct.toFixed(0)}%"></i></span>`}</div>`;
+    : `<div class="assin-status"><div class="assin-topo"><b>${venc ? 'Seu acesso venceu' : (a.plano === 'teste' ? 'Teste grátis' : 'Plano ativo')}</b>${venc ? '' : `<span class="selo">${semFim(a.ate) ? 'Sem vencimento' : `${a.dias} ${a.dias === 1 ? 'dia' : 'dias'}`}</span>`}</div>
+      ${venc ? '' : `<small class="mudo">${semFim(a.ate) ? 'Seu acesso não tem data para acabar.' : `Vale até <strong>${dataBr(a.ate)}</strong>`}</small><span class="assin-trilho" aria-hidden="true"><i style="width:${pct.toFixed(0)}%"></i></span>`}</div>`;
   return `<h2>Meu plano</h2>
     ${status}
     <h3 class="assin-sub">Planos</h3>
