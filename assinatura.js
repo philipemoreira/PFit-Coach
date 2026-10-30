@@ -105,24 +105,22 @@ const planoCard = (nome, sub, preco, atual) => `<div class="plano ${atual ? 'atu
   <b class="plano-nome">${nome}</b><small class="mudo">${sub}</small>
   <span class="plano-preco">${reais(preco)}<small>/mês</small></span></div>`;
 
-export function cartaoPlanos() {
+// Linha curta para o menu da conta: { titulo, sub, venc }.
+export function resumoPlano() {
   const a = acesso();
-  if (a.estado === 'carregando') return '';
-  const personal = estado.perfil && estado.perfil.papel === 'personal';
-  if (a.origem === 'personal') {
-    const ok = a.estado === 'ativo';
-    return `<section class="card assin-card ${ok ? '' : 'venc'}"><div class="assin-topo"><h2>${ok ? 'Incluída no plano do personal' : 'Acesso pausado'}</h2></div>
-      <p class="mudo">${ok ? 'Seu acesso está incluído no plano do seu personal. Você não paga nada.' : 'A assinatura do seu personal venceu. Assim que ele renovar, seu acesso volta sozinho. Seus dados estão guardados.'}</p></section>`;
-  }
-  const venc = a.estado === 'vencido';
-  const pct = venc ? 0 : Math.max(4, Math.min(100, (a.dias / DIAS_TESTE) * 100));
-  const nome = a.plano === 'teste' ? 'Teste grátis' : 'Plano ativo';
-  return `<section class="card assin-card ${venc ? 'venc' : ''}">
-    <div class="assin-topo"><h2>${venc ? 'Seu acesso venceu' : nome}</h2>${venc ? '' : `<span class="selo">${a.dias} ${a.dias === 1 ? 'dia' : 'dias'}</span>`}</div>
-    <p class="mudo">${venc ? 'Seus dados continuam guardados. Para voltar a usar, renove a assinatura.' : `Vale até <strong>${dataBr(a.ate)}</strong>.`}</p>
-    ${venc ? '' : `<span class="assin-trilho" aria-hidden="true"><i style="width:${pct.toFixed(0)}%"></i></span>`}
-    <div class="acoes-card"><button class="btn ${venc ? '' : 'secundario'} cheio" type="button" data-acao="planos-abrir">Ver planos</button></div>
-  </section>`;
+  if (a.estado === 'carregando') return null;
+  if (a.origem === 'personal') return { sub: a.estado === 'ativo' ? 'Incluído no plano do seu personal' : 'Acesso pausado', venc: a.estado !== 'ativo' };
+  if (a.estado === 'vencido') return { sub: 'Venceu · toque para renovar', venc: true };
+  return { sub: `${a.plano === 'teste' ? 'Teste grátis' : 'Plano ativo'} · ${a.dias} ${a.dias === 1 ? 'dia' : 'dias'} restantes`, venc: false };
+}
+
+// Aviso vermelho na conta só quando o acesso venceu (no resto do tempo o plano fica no menu).
+export function avisoVencido() {
+  const a = acesso();
+  if (a.estado !== 'vencido') return '';
+  return `<section class="card assin-card venc"><div class="assin-topo"><h2>${a.origem === 'personal' ? 'Acesso pausado' : 'Seu acesso venceu'}</h2></div>
+    <p class="mudo">${a.origem === 'personal' ? 'A assinatura do seu personal venceu. Assim que ele renovar, seu acesso volta sozinho. Seus dados estão guardados.' : 'Seus dados continuam guardados. Para voltar a usar, renove a assinatura.'}</p>
+    ${a.origem === 'personal' ? '' : '<div class="acoes-card"><button class="btn cheio" type="button" data-acao="planos-abrir">Ver planos</button></div>'}</section>`;
 }
 
 // Conteúdo da janela "Planos".
@@ -137,7 +135,14 @@ export function folhaPlanos() {
       planoCard('6 a 15 alunos', 'Para crescer', PRECOS.p15, marca('p15')),
       planoCard('16 alunos ou mais', 'Sem limite', PRECOS.ilimitado, marca('ilimitado'))].join('')
     : planoCard('Plano do aluno', 'Treino e dieta completos', PRECOS.aluno, marca('aluno'));
-  return `<h2>Planos</h2>
+  const pct = venc || a.origem !== 'proprio' ? 0 : Math.max(4, Math.min(100, (a.dias / DIAS_TESTE) * 100));
+  const status = a.origem === 'personal'
+    ? `<div class="assin-status"><b>${venc ? 'Acesso pausado' : 'Incluído no plano do seu personal'}</b><small class="mudo">${venc ? 'Volta quando ele renovar.' : 'Você não paga nada.'}</small></div>`
+    : `<div class="assin-status"><div class="assin-topo"><b>${venc ? 'Seu acesso venceu' : (a.plano === 'teste' ? 'Teste grátis' : 'Plano ativo')}</b>${venc ? '' : `<span class="selo">${a.dias} ${a.dias === 1 ? 'dia' : 'dias'}</span>`}</div>
+      ${venc ? '' : `<small class="mudo">Vale até <strong>${dataBr(a.ate)}</strong></small><span class="assin-trilho" aria-hidden="true"><i style="width:${pct.toFixed(0)}%"></i></span>`}</div>`;
+  return `<h2>Meu plano</h2>
+    ${status}
+    <h3 class="assin-sub">Planos</h3>
     <p class="mudo peq">${personal ? 'O preço depende de quantos alunos você tem conectados.' : 'Tudo incluído: treino, dieta e progresso.'} Os 15 primeiros dias são grátis.</p>
     <div class="planos ${personal ? '' : 'um'}">${planos}</div>
     ${a.estado === 'ativo' && a.origem === 'proprio' && a.dias > 7 ? '' : comoPagar()}

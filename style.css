@@ -1391,3 +1391,25 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 .aba-aluno{border:0;background:transparent;color:var(--mudo);font:inherit;font-weight:600;font-size:14px;padding:10px 4px;border-radius:10px;cursor:pointer}
 .aba-aluno[aria-selected="true"]{background:var(--limao);color:var(--sobre-limao)}
 .abas-aluno + .grade-cards, .abas-aluno + .card{margin-top:0}
+
+.assin-status{display:grid;gap:6px;padding:12px 14px;border:1px solid var(--borda);border-radius:14px;background:var(--card2)}
+.assin-status .assin-topo{margin:0}
+.assin-status .assin-trilho{margin:4px 0 0}
+
+/* v45 lista de alunos compacta */
+.convite-mini{padding:12px 14px;border-color:var(--limao)}
+.convite-linha{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.codigo-mini{margin:2px 0 0;font-family:var(--fonte-titulo);font-weight:800;font-size:24px;letter-spacing:4px;color:var(--destaque)}
+.convite-acoes{display:flex;gap:6px;flex-shrink:0}
+.convite-mini .peq{margin:8px 0 0}
+.alunos-lista{padding:0}
+.aluno-lin{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:transparent;color:inherit;font:inherit;padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--borda)}
+.aluno-lin:last-child{border-bottom:0}
+.aluno-txt{flex:1;min-width:0;display:grid;gap:2px}
+.aluno-txt b{font-size:15px}
+.aluno-txt small{font-size:12.5px}
+.aluno-aviso{color:var(--perigo)}
+.secao-cab h2 .selo{margin-left:6px;vertical-align:middle}
+.convite-linha{flex-wrap:wrap}
+.codigo-mini{font-size:22px;letter-spacing:3px}
+.convite-acoes{margin-left:auto}

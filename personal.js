@@ -3,7 +3,7 @@ import {
   db, onSnapshot, collection, doc, query, orderBy, limit
 } from './firebase.js';
 import { estado } from './estado.js';
-import { abrirFolha, confirmar } from './folha.js';
+import { abrirFolha, confirmar, fecharTodasFolhas } from './folha.js';
 import { escaparHtml, dataLocal, parseData, formatarDataCurta, formatarNumero, numero, novoId, toast, segundaDaSemana, DIAS_CURTOS, ORDEM_DIAS } from './util.js';
 import { salvarDoc, salvarGlobal, removerGlobal, salvarPerfil } from './dados.js';
 import { abrirEditorTreino } from './treinos.js';
@@ -170,14 +170,15 @@ function cartaoConvite() {
     </section>`;
   }
   return `
-  <section class="card destaque">
-    <h2>Seu código de convite</h2>
-    <p class="codigo" aria-label="Código de convite">${escaparHtml(codigo)}</p>
-    <p class="mudo peq">Passe para o aluno digitar em Minha conta. Quem já está conectado continua conectado se você trocar o código.</p>
-    <div class="acoes-card linha">
-      <button class="btn" type="button" data-acao="p-convite-copiar">Copiar</button>
-      <button class="btn secundario" type="button" data-acao="p-convite-novo">Trocar código</button>
+  <section class="card convite-mini">
+    <div class="convite-linha">
+      <div class="convite-cod"><small class="mudo">Seu código de convite</small><p class="codigo-mini" aria-label="Código de convite">${escaparHtml(codigo)}</p></div>
+      <div class="convite-acoes">
+        <button class="btn pequeno" type="button" data-acao="p-convite-copiar">Copiar</button>
+        <button class="btn pequeno secundario" type="button" data-acao="p-convite-novo">Trocar</button>
+      </div>
     </div>
+    <p class="mudo peq">O aluno digita em Minha conta. Quem já está conectado continua conectado se você trocar.</p>
   </section>`;
 }
 
@@ -188,16 +189,15 @@ function cartaoAluno(v) {
   if (s.carregando) linha = 'Carregando…';
   else if (!s.ult) linha = 'Ainda não treinou';
   else linha = `Último treino: ${formatarDataCurta(s.ult.data)}${s.dias === 0 ? ' (hoje)' : s.dias === 1 ? ' (ontem)' : ` (${s.dias} dias)`} · ${s.semana} na semana`;
+  const passou = passouHoje(v.id);
   return `
-  <section class="card aluno-card">
-    <div class="card-topo">
-      <div class="aluno-id"><div class="avatar peq" aria-hidden="true">${escaparHtml(nome.trim().charAt(0).toUpperCase())}</div>
-        <div><h2>${escaparHtml(nome)}</h2><p class="mudo peq">${escaparHtml(linha)}</p></div></div>
-      ${!s.carregando && s.sumido ? `<span class="selo alerta">sumido há ${s.dias} dias</span>` : ''}
-    </div>
-    ${passouHoje(v.id) ? `<p class="alerta-passou" role="status">⚠️ Passou da dieta hoje: ${escaparHtml(passouHoje(v.id))}</p>` : ''}
-    <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="p-aluno-abrir" data-id="${escaparHtml(v.id)}">Abrir aluno</button></div>
-  </section>`;
+  <button type="button" class="aluno-lin" data-acao="p-aluno-abrir" data-id="${escaparHtml(v.id)}">
+    <span class="avatar peq" aria-hidden="true">${escaparHtml(nome.trim().charAt(0).toUpperCase())}</span>
+    <span class="aluno-txt"><b>${escaparHtml(nome)}</b><small class="mudo">${escaparHtml(linha)}</small>
+      ${passou ? `<small class="aluno-aviso">⚠️ Passou da dieta hoje: ${escaparHtml(passou)}</small>` : ''}</span>
+    ${!s.carregando && s.sumido ? `<span class="selo alerta">${s.dias} dias</span>` : ''}
+    <svg class="linha-seta" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+  </button>`;
 }
 
 function cartaoModelos() {
@@ -214,17 +214,30 @@ function listaAlunos() {
   sincronizarLista();
   const sumidos = estado.alunos.filter((v) => { const s = situacao(v); return !s.carregando && s.sumido; });
   const passaram = estado.alunos.filter((v) => passouHoje(v.id));
+  const cq = ordenar(conquistasPersonal(resumo));
+  const prox = cq.find((c) => !c.ok);
   return `
   <header class="topo"><h1>Alunos</h1></header>
   ${avisoFaixa()}
   ${passaram.length ? `<p class="alerta-passou" role="status">⚠️ ${passaram.length === 1 ? '1 aluno passou' : passaram.length + ' alunos passaram'} da dieta hoje: ${escaparHtml(passaram.map((v) => v.alunoNome || 'Aluno').join(', '))}.</p>` : ''}
   ${cartaoConvite()}
   ${sumidos.length ? `<p class="alerta-atraso" role="status">⚠️ ${sumidos.length} ${sumidos.length === 1 ? 'aluno está' : 'alunos estão'} há ${DIAS_SUMIDO} dias ou mais sem treinar: ${escaparHtml(sumidos.map((v) => v.alunoNome || 'Aluno').join(', '))}.</p>` : ''}
-  ${estado.alunos.length
-    ? `<div class="grade-cards">${estado.alunos.map(cartaoAluno).join('')}</div>`
+  <section class="secao">
+    <div class="secao-cab"><h2>Seus alunos${estado.alunos.length ? ` <span class="selo">${estado.alunos.length}</span>` : ''}</h2></div>
+    ${estado.alunos.length
+    ? `<div class="linhas alunos-lista">${estado.alunos.map(cartaoAluno).join('')}</div>`
     : '<section class="card"><p class="mudo vazio-grafico">Nenhum aluno conectado ainda.<br>Passe o código para o primeiro.</p></section>'}
-  <div class="grade-cards">${cartaoModelos()}${cartaoConquistasPersonal(resumo)}</div>`;
+  </section>
+  <section class="secao">
+    <div class="linhas">
+      ${atalho('p-modelos-abrir', 'Modelos de treino', estado.modelos.length ? `${estado.modelos.length} ${estado.modelos.length === 1 ? 'modelo' : 'modelos'} · aplique em qualquer aluno` : 'Treinos prontos para aplicar em qualquer aluno')}
+      ${atalho('pc-todas', 'Conquistas', `${cq.filter((c) => c.ok).length} de ${cq.length}${prox ? ` · próxima: ${prox.nome}` : ''}`)}
+    </div>
+  </section>`;
 }
+
+const atalho = (acao, titulo, sub) => `
+      <button type="button" class="linha-menu" data-acao="${acao}"><span class="linha-txt"><b>${titulo}</b><small>${escaparHtml(sub)}</small></span><svg class="linha-seta" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`;
 
 function blocoMacrosAluno(m) {
   const hoje = dataLocal();
@@ -490,6 +503,7 @@ export const personal = {
       } catch (e) { console.error(e); toast('Não consegui remover. Tente de novo.'); }
     },
     'p-aba': (el) => { abaAluno = el.dataset.aba; nav.renderizar(); window.scrollTo(0, 0); },
+    'p-modelos-abrir': () => abrirFolha(`${cartaoModelos()}<button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`, { classe: 'folha-alta' }),
     'pc-todas': () => {
       const todas = ordenar(conquistasPersonal(resumo));
       abrirFolha(`<div class="card-topo"><h2>Conquistas</h2><span class="selo">${todas.filter((c) => c.ok).length} de ${todas.length}</span></div>
@@ -500,10 +514,10 @@ export const personal = {
       const c = conquistasPersonal(resumo).find((x) => x.nome === el.dataset.n);
       if (c) abrirFolha(folhaConquista(c));
     },
-    'p-modelo-novo': () => abrirEditorTreino(null, { uid: estado.uid, colecao: 'modelos' }),
+    'p-modelo-novo': () => { fecharTodasFolhas(); abrirEditorTreino(null, { uid: estado.uid, colecao: 'modelos' }); },
     'p-modelo-editar': (el) => {
       const m = estado.modelos.find((x) => x.id === el.dataset.id);
-      if (m) abrirEditorTreino(m, { uid: estado.uid, colecao: 'modelos' });
+      if (m) { fecharTodasFolhas(); abrirEditorTreino(m, { uid: estado.uid, colecao: 'modelos' }); }
     }
   }
 };

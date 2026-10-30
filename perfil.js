@@ -1,7 +1,7 @@
 // Aba Perfil: dados da conta, backup e sair.
 import { auth, signOut, db, doc, getDoc } from './firebase.js';
 import { estado } from './estado.js';
-import { abrirFolha, confirmar } from './folha.js';
+import { abrirFolha, confirmar, fecharTodasFolhas } from './folha.js';
 import { escaparHtml, dataLocal, toast, numero, formatarDataCurta, avatarHtml, reduzirFoto } from './util.js';
 import { salvarPerfil, lerTudo, gravarVarios, salvarGlobal, removerGlobal } from './dados.js';
 import { temaSalvo, definirTema } from './tema.js';
@@ -10,7 +10,7 @@ import { metaVolume, metaAgua, metaPeso, metaMacros, formatarVolume } from './me
 import { abrirPrivacidade, abrirTermos, abrirExclusao } from './conta.js';
 import { abrirAjuda } from './ajuda.js';
 import { abrirOnboarding, resumoAnamnese, idadeDe } from './onboarding.js';
-import { cartaoPlanos, folhaPlanos, bloqueado } from './assinatura.js';
+import { avisoVencido, resumoPlano, folhaPlanos, bloqueado } from './assinatura.js';
 
 const COLECOES = ['treinos', 'regras', 'dietaItens', 'sessoes', 'peso', 'checks', 'agua', 'medidas', 'alimentos', 'refeicoes'];
 
@@ -59,6 +59,17 @@ async function restaurarBackup(arquivo) {
     console.error(e);
     toast('Não consegui restaurar o backup.');
   }
+}
+
+function cartaoSaude(p) {
+  return `
+    <section class="card">
+    <h2>Meus dados e saúde</h2>
+    ${resumoAnamnese(p.anamnese).length
+  ? `<div class="lista-metas">${resumoAnamnese(p.anamnese).map(([k, v]) => `<div><span>${escaparHtml(k)}</span><strong>${escaparHtml(v)}</strong></div>`).join('')}</div>`
+  : '<p class="mudo peq">Você ainda não respondeu. Leva 1 minuto e o app já sugere suas metas.</p>'}
+    <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="onboarding-refazer">${p.anamnese ? 'Atualizar respostas' : 'Responder agora'}</button></div>
+  </section>`;
 }
 
 function cartaoPersonal() {
@@ -232,21 +243,13 @@ export const contaTela = {
         <button class="btn pequeno secundario perfil-editar" type="button" data-acao="perfil-nome">Editar nome</button>
       </div>
     </section>
-    ${cartaoPlanos()}
-    ${personal
-    ? secao('Seus dados', 'As informações do seu perfil de personal.', cartaoDadosPersonal(p))
-    : `${secao('Meu personal', 'Conecte-se ao seu personal para ele montar seu treino e sua dieta.', cartaoPersonal())}
-    ${secao('Sobre você', 'Suas respostas iniciais. Ajudam o app e o seu personal.', `
-    <section class="card">
-      <h2>Meus dados e saúde</h2>
-      ${resumoAnamnese(p.anamnese).length
-    ? `<div class="lista-metas">${resumoAnamnese(p.anamnese).map(([k, v]) => `<div><span>${escaparHtml(k)}</span><strong>${escaparHtml(v)}</strong></div>`).join('')}</div>`
-    : '<p class="mudo peq">Você ainda não respondeu. Leva 1 minuto e o app já sugere suas metas.</p>'}
-      <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="onboarding-refazer">${p.anamnese ? 'Atualizar respostas' : 'Responder agora'}</button></div>
-    </section>`)}`}
+    ${avisoVencido()}
     <section class="secao">
       <div class="linhas">
-        ${linha('aba', 'Configurações', personal ? 'Tema e privacidade' : 'Tema, metas, backup e privacidade', 'data-aba="config"')}
+        ${personal ? '' : linha('personal-abrir', 'Meu personal', estado.vinculo ? escaparHtml(estado.vinculo.personalNome || 'Conectado') : 'Conectar com o código dele')}
+        ${personal ? '' : linha('saude-abrir', 'Meus dados e saúde', p.anamnese ? 'Ver ou atualizar suas respostas' : 'Responder o questionário inicial (1 minuto)')}
+        ${resumoPlano() ? linha('planos-abrir', 'Meu plano', resumoPlano().sub, '', resumoPlano().venc ? 'perigo' : '') : ''}
+        ${linha('aba', 'Configurações', personal ? 'Dados pessoais, tema e privacidade' : 'Tema, metas, backup e privacidade', 'data-aba="config"')}
         ${linha('ajuda', 'Ajuda', 'Como usar o app e falar com o suporte')}
       </div>
     </section>
@@ -257,9 +260,11 @@ export const contaTela = {
   },
   acoes: {
     'planos-abrir': () => abrirFolha(folhaPlanos()),
+    'personal-abrir': () => abrirFolha(`${cartaoPersonal()}<button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`),
+    'saude-abrir': () => abrirFolha(`${cartaoSaude(estado.perfil || {})}<button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`, { classe: 'folha-alta' }),
     privacidade: () => abrirPrivacidade(),
     termos: () => abrirTermos(),
-    'onboarding-refazer': () => abrirOnboarding({ refazer: true }),
+    'onboarding-refazer': () => { fecharTodasFolhas(); abrirOnboarding({ refazer: true }); },
     ajuda: () => abrirAjuda(),
     'conta-excluir': () => abrirExclusao(),
     'personal-dados': () => {
@@ -280,10 +285,12 @@ export const contaTela = {
       });
     },
     'vinculo-desligar': async () => {
+      fecharTodasFolhas();
       if (!(await confirmar('Desligar do seu personal? Ele deixa de ver seus dados e de montar seu treino. O que já foi montado fica com você, e você volta a poder editar.', { ok: 'Desligar', perigo: true }))) return;
       try { await removerGlobal('vinculos', estado.uid); toast('Você se desligou do personal.'); } catch (e) { console.error(e); toast('Não consegui desligar. Tente de novo.'); }
     },
     'vinculo-conectar': () => {
+      fecharTodasFolhas();
       const f = abrirFolha(`
         <h2>Código do personal</h2>
         <label class="campo">Código<input class="in codigo-in" data-f="codigo" maxlength="8" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="8 letras e números"></label>
@@ -417,6 +424,7 @@ export const configTela = {
     const personal = !!(estado.perfil && estado.perfil.papel === 'personal');
     return `
     ${topoSub('Configurações')}
+    ${personal ? secao('Dados pessoais', 'As informações do seu perfil de personal.', cartaoDadosPersonal(estado.perfil || {})) : ''}
     ${secao('Aparência', 'Escolha como o app aparece. A mudança é na hora.', `
     <section class="card">
       <div class="seg tema" role="group" aria-label="Tema do app">
