@@ -1,5 +1,6 @@
 // Aba Dieta: uma lista fixa por refeição, igual todos os dias. A pessoa só marca o que comeu e a quantidade.
 import { estado } from './estado.js';
+import { contar } from './conquistas-personal.js';
 import { abrirFolha, confirmar } from './folha.js';
 import { escaparHtml, novoId, dataLocal, numero, toast, formatarNumero } from './util.js';
 import { salvarDoc, removerDoc } from './dados.js';
@@ -126,6 +127,7 @@ export function abrirEditorItem(momentoInicial, item, uidAlvo = estado.uid) {
         dados[k] = n;
       }
       salvarDoc(uidAlvo, 'dietaItens', item ? item.id : novoId(), dados);
+      if (!item && uidAlvo !== estado.uid) contar('dietas');
       f.fechar();
     } else if (b.dataset.ed === 'excluir') {
       if (await confirmar(`Tirar “${item.nome}” da lista?`, { ok: 'Tirar', perigo: true })) {

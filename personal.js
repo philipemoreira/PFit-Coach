@@ -17,11 +17,13 @@ import { avisoFaixa } from './assinatura.js';
 import { listaRecolhivel } from './recolhivel.js';
 import { resumoAnamnese } from './onboarding.js';
 import { abrirFotos } from './fotos.js';
+import { contar, conquistasPersonal, cartaoConquistasPersonal, linhaConq, ordenar, folhaConquista } from './conquistas-personal.js';
 
 const LETRAS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem letras que se confundem (0/O, 1/I)
 const DIAS_SUMIDO = 7;
 
 let alunoAberto = null;
+let abaAluno = 'treinos'; // treinos | dieta | corpo | perfil
 let dados = vazio();
 let paradoresAluno = [];
 const resumo = {}; // uid -> sessoes recentes (para a lista)
@@ -77,6 +79,7 @@ function sincronizarLista() {
 function abrirDetalhe(uid) {
   fecharDetalhe();
   alunoAberto = uid;
+  abaAluno = 'treinos';
   dados = vazio();
   const ouvir = (sub, campo, restr) => {
     paradoresAluno.push(onSnapshot(query(collection(db, 'usuarios', uid, sub), ...restr), (snap) => {
@@ -220,7 +223,7 @@ function listaAlunos() {
   ${estado.alunos.length
     ? `<div class="grade-cards">${estado.alunos.map(cartaoAluno).join('')}</div>`
     : '<section class="card"><p class="mudo vazio-grafico">Nenhum aluno conectado ainda.<br>Passe o código para o primeiro.</p></section>'}
-  <div class="grade-cards">${cartaoModelos()}</div>`;
+  <div class="grade-cards">${cartaoModelos()}${cartaoConquistasPersonal(resumo)}</div>`;
 }
 
 function blocoMacrosAluno(m) {
@@ -275,7 +278,10 @@ function detalhe(v) {
     <div class="num-card"><strong>${noMes}</strong><span>treinos no mês</span></div>
     <div class="num-card"><strong>${dieta === null ? '—' : dieta + '%'}</strong><span>dieta em 7 dias</span></div>
   </section>
-  <div class="grade-cards">
+  <nav class="abas-aluno" role="tablist" aria-label="Seções do aluno">
+    ${[['treinos', 'Treinos'], ['dieta', 'Dieta'], ['corpo', 'Corpo'], ['perfil', 'Perfil']].map(([k, r]) => `<button type="button" role="tab" class="aba-aluno" data-acao="p-aba" data-aba="${k}" aria-selected="${abaAluno === k}">${r}</button>`).join('')}
+  </nav>
+  ${abaAluno === 'treinos' ? `<div class="grade-cards">
     <section class="card">
       <div class="card-topo"><h2>Treinos dele</h2><button class="btn pequeno" type="button" data-acao="p-treino-novo">+ Novo</button></div>
       ${dados.treinos.length ? listaRecolhivel('p-treinos', dados.treinos.map((t) => `
@@ -285,6 +291,14 @@ function detalhe(v) {
         </div>`)) : '<p class="mudo vazio-peq">Nenhum treino ainda.</p>'}
       <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="p-treino-modelo-usar">Usar um modelo</button></div>
     </section>
+  </div>
+  <section class="card">
+    <h2>Últimos treinos dele</h2>
+    ${sess.length ? listaRecolhivel('p-sessoes', sess.slice(0, 10).map((s) => `<button type="button" class="regra-linha" data-acao="p-aluno-sessao" data-id="${escaparHtml(s.id)}">
+      <small class="hora">${formatarDataCurta(s.data)}</small>
+      <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${s.duracaoMin ? s.duracaoMin + ' min · ' : ''}${Math.round(volumeSessao(s)).toLocaleString('pt-BR')} kg${(s.recordes || []).length ? ' · 🏆' : ''}${s.nota ? ' · 💬 tem anotação' : ''}</small></span><span class="seta" aria-hidden="true">›</span></button>`)) : '<p class="mudo">Nenhum treino feito ainda.</p>'}
+  </section>` : ''}
+  ${abaAluno === 'dieta' ? `<div class="grade-cards">
     <section class="card">
       <div class="card-topo"><h2>Dieta dele</h2><button class="btn pequeno" type="button" data-acao="p-dieta-item-novo">+ Item</button></div>
       <p class="mudo peq">Lista fixa, igual todos os dias. Ele só marca o que comeu.</p>
@@ -292,6 +306,12 @@ function detalhe(v) {
         <div class="lista">${l.map((p) => `<button type="button" class="regra-linha" data-acao="p-dieta-item-editar" data-id="${escaparHtml(p.id)}"><span>${escaparHtml(p.nome)}<br><small class="mudo">${escaparHtml(descreverQtd(p.qtd, p.unidade))}${p.kcal ? ` · ${formatarNumero(p.kcal)} kcal` : ''}</small></span><span class="seta" aria-hidden="true">›</span></button>`).join('')}</div></div>`).join('') : '<p class="mudo vazio-peq">Nenhum item ainda.</p>'}
       ${blocoPassou(planoAluno)}
     </section>
+    <section class="card">
+      <h2>Alimentação</h2>
+      ${blocoMacrosAluno(m)}
+    </section>
+  </div>` : ''}
+  ${abaAluno === 'corpo' ? `<div class="grade-cards">
     <section class="card">
       <h2>Metas dele</h2>
       <p class="mudo peq">Volume por dia: <strong>${typeof m.metaVolume === 'number' ? formatarVolume(m.metaVolume) : 'sem meta'}</strong><br>
@@ -302,28 +322,20 @@ function detalhe(v) {
       <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="p-aluno-metas">Definir metas</button></div>
     </section>
     <section class="card">
-      <h2>Sobre o aluno</h2>
-      ${(() => { const l = resumoAnamnese(dados.perfilAluno && dados.perfilAluno.anamnese); return l.length ? `<div class="lista-metas">${l.map(([k, v]) => `<div><span>${escaparHtml(k)}</span><strong>${escaparHtml(v)}</strong></div>`).join('')}</div>` : '<p class="mudo peq">Ele ainda não respondeu o questionário inicial.</p>'; })()}
-    </section>
-    <section class="card">
-      <h2>Alimentação</h2>
-      ${blocoMacrosAluno(m)}
-    </section>
-    <section class="card">
       <h2>Corpo</h2>
       <p class="mudo peq">Peso atual: <strong>${peso ? formatarNumero(peso.kg) + ' kg (' + formatarDataCurta(peso.data) + ')' : 'sem registro'}</strong>${typeof m.metaPeso === 'number' && peso ? `<br>Meta: <strong>${formatarNumero(m.metaPeso)} kg</strong> · faltam ${formatarNumero(Math.abs(peso.kg - m.metaPeso))} kg` : ''}</p>
       ${medida ? `<p class="mudo peq">Medidas (${formatarDataCurta(medida.data)}): ${[['peito', 'peito'], ['cintura', 'cintura'], ['quadril', 'quadril'], ['braco', 'braço'], ['coxa', 'coxa'], ['panturrilha', 'panturrilha']].filter(([k]) => typeof medida[k] === 'number').map(([k, n]) => `${n} ${formatarNumero(medida[k])} cm`).join(' · ')}</p>` : '<p class="mudo peq">Sem medidas registradas.</p>'}
       <p class="mudo peq">Volume levantado nesta semana: <strong>${formatarVolume(volSemana)}</strong></p>
       <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="p-aluno-fotos">Ver fotos (se ele compartilhar)</button></div>
     </section>
+  </div>` : ''}
+  ${abaAluno === 'perfil' ? `<div class="grade-cards">
+    <section class="card">
+      <h2>Sobre o aluno</h2>
+      ${(() => { const l = resumoAnamnese(dados.perfilAluno && dados.perfilAluno.anamnese); return l.length ? `<div class="lista-metas">${l.map(([k, v]) => `<div><span>${escaparHtml(k)}</span><strong>${escaparHtml(v)}</strong></div>`).join('')}</div>` : '<p class="mudo peq">Ele ainda não respondeu o questionário inicial.</p>'; })()}
+    </section>
   </div>
-  <section class="card">
-    <h2>Últimos treinos dele</h2>
-    ${sess.length ? listaRecolhivel('p-sessoes', sess.slice(0, 10).map((s) => `<button type="button" class="regra-linha" data-acao="p-aluno-sessao" data-id="${escaparHtml(s.id)}">
-      <small class="hora">${formatarDataCurta(s.data)}</small>
-      <span>${escaparHtml(s.treinoNome)}<br><small class="mudo">${s.duracaoMin ? s.duracaoMin + ' min · ' : ''}${Math.round(volumeSessao(s)).toLocaleString('pt-BR')} kg${(s.recordes || []).length ? ' · 🏆' : ''}${s.nota ? ' · 💬 tem anotação' : ''}</small></span><span class="seta" aria-hidden="true">›</span></button>`)) : '<p class="mudo">Nenhum treino feito ainda.</p>'}
-  </section>
-  <button class="btn perigo-claro cheio" type="button" data-acao="p-aluno-remover">Remover este aluno</button>`;
+  <button class="btn perigo-claro cheio" type="button" data-acao="p-aluno-remover">Remover este aluno</button>` : ''}`;
 }
 
 function atual() { return estado.alunos.find((a) => a.id === alunoAberto) || null; }
@@ -395,6 +407,7 @@ export const personal = {
         const resto = { ...m };
         delete resto.id;
         await salvarDoc(alunoAberto, 'treinos', novoId(), { ...resto, ordem: Date.now(), criadoEm: new Date().toISOString(), atualizadoEm: new Date().toISOString() });
+        contar('treinos');
         f.fechar();
         toast('Treino aplicado ao aluno.');
       });
@@ -475,6 +488,17 @@ export const personal = {
         nav.renderizar();
         toast('Aluno removido.');
       } catch (e) { console.error(e); toast('Não consegui remover. Tente de novo.'); }
+    },
+    'p-aba': (el) => { abaAluno = el.dataset.aba; nav.renderizar(); window.scrollTo(0, 0); },
+    'pc-todas': () => {
+      const todas = ordenar(conquistasPersonal(resumo));
+      abrirFolha(`<div class="card-topo"><h2>Conquistas</h2><span class="selo">${todas.filter((c) => c.ok).length} de ${todas.length}</span></div>
+        <div class="conq-modal-lista">${todas.map((c) => linhaConq(c, 'pc-ver')).join('')}</div>
+        <button class="btn cheio" type="button" data-fechar>Fechar</button>`, { classe: 'folha-alta' });
+    },
+    'pc-ver': (el) => {
+      const c = conquistasPersonal(resumo).find((x) => x.nome === el.dataset.n);
+      if (c) abrirFolha(folhaConquista(c));
     },
     'p-modelo-novo': () => abrirEditorTreino(null, { uid: estado.uid, colecao: 'modelos' }),
     'p-modelo-editar': (el) => {

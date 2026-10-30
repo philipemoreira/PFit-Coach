@@ -10,7 +10,7 @@ import { metaVolume, metaAgua, metaPeso, metaMacros, formatarVolume } from './me
 import { abrirPrivacidade, abrirTermos, abrirExclusao } from './conta.js';
 import { abrirAjuda } from './ajuda.js';
 import { abrirOnboarding, resumoAnamnese, idadeDe } from './onboarding.js';
-import { corpoAssinatura, bloqueado } from './assinatura.js';
+import { cartaoPlanos, folhaPlanos, bloqueado } from './assinatura.js';
 
 const COLECOES = ['treinos', 'regras', 'dietaItens', 'sessoes', 'peso', 'checks', 'agua', 'medidas', 'alimentos', 'refeicoes'];
 
@@ -216,7 +216,6 @@ export const contaTela = {
   render() {
     const p = estado.perfil || {};
     const personal = p.papel === 'personal';
-    const assin = corpoAssinatura();
     return `
     ${topoSub('Minha conta')}
     <section class="card conta-card">
@@ -232,8 +231,8 @@ export const contaTela = {
         </div>
         <button class="btn pequeno secundario perfil-editar" type="button" data-acao="perfil-nome">Editar nome</button>
       </div>
-      ${assin ? `<div class="conta-assin ${assin.cls}">${assin.html}</div>` : ''}
     </section>
+    ${cartaoPlanos()}
     ${personal
     ? secao('Seus dados', 'As informações do seu perfil de personal.', cartaoDadosPersonal(p))
     : `${secao('Meu personal', 'Conecte-se ao seu personal para ele montar seu treino e sua dieta.', cartaoPersonal())}
@@ -257,6 +256,7 @@ export const contaTela = {
     <p class="aviso-rodape">PFit Coach · versão 1</p>`;
   },
   acoes: {
+    'planos-abrir': () => abrirFolha(folhaPlanos()),
     privacidade: () => abrirPrivacidade(),
     termos: () => abrirTermos(),
     'onboarding-refazer': () => abrirOnboarding({ refazer: true }),

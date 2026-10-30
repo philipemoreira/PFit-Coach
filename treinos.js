@@ -1,5 +1,6 @@
 // Aba Treinos: lista, criar, editar e excluir treinos.
 import { estado } from './estado.js';
+import { contar } from './conquistas-personal.js';
 import { abrirFolha, confirmar, fecharTodasFolhas } from './folha.js';
 import { escaparHtml, novoId, numero, DIAS_CURTOS, ORDEM_DIAS, toast } from './util.js';
 import { salvarDoc, removerDoc } from './dados.js';
@@ -74,7 +75,8 @@ function blocoExercicio(ex = {}) {
 }
 
 // Janela para escolher o exercício: grupos que abrem um de cada vez (acordeão) + busca.
-function abrirEscolha(aoEscolher, textoAtual = '') {
+function abrirEscolha(aoEscolher, textoAtual = '', aoCancelar = null) {
+  let escolheu = false;
   const meus = nomesJaUsados().filter((n) => !todosOsNomes().includes(n)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   const grupos = Object.entries(BASE).map(([g, lista]) => [g, lista]);
   if (meus.length) grupos.push(['Meus exercícios', meus]);
@@ -91,7 +93,7 @@ function abrirEscolha(aoEscolher, textoAtual = '') {
     </div>
     <div class="lib-res" data-res hidden></div>
     <p class="mudo peq lib-dica">Não achou o seu? Busque e toque em <b>Usar</b>, ou feche e digite o nome.</p>
-    <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Fechar</button></div>`, { classe: 'folha-alta folha-lib' });
+    <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Fechar</button></div>`, { classe: 'folha-alta folha-lib', aoFechar: () => { if (!escolheu && aoCancelar) aoCancelar(); } });
   const el = f.el;
   const busca = el.querySelector('[data-busca]');
   const gruposEl = el.querySelector('[data-grupos]');
@@ -120,7 +122,7 @@ function abrirEscolha(aoEscolher, textoAtual = '') {
       return;
     }
     const it = e.target.closest('.lib-item');
-    if (it && it.dataset.nome) { aoEscolher(it.dataset.nome); f.fechar(); }
+    if (it && it.dataset.nome) { escolheu = true; aoEscolher(it.dataset.nome); f.fechar(); }
   });
   if (textoAtual) { busca.value = textoAtual; busca.dispatchEvent(new Event('input')); }
   return f;
@@ -161,7 +163,7 @@ export function abrirEditorTreino(treino, opcoes = {}) {
   const uidAlvo = opcoes.uid || estado.uid;
   const colecao = opcoes.colecao || 'treinos';
   const rotulo = colecao === 'modelos' ? 'modelo' : 'treino';
-  const exs = treino && (treino.exercicios || []).length ? treino.exercicios : [{}];
+  const exs = treino && (treino.exercicios || []).length ? treino.exercicios : [];
   const folha = abrirFolha(`
     <h2>${treino ? `Editar ${rotulo}` : `Novo ${rotulo}`}</h2>
     <section class="ed-card">
@@ -176,6 +178,7 @@ export function abrirEditorTreino(treino, opcoes = {}) {
     <div class="ed-cab"><h3>Exercícios</h3><span class="mudo peq" data-cont></span></div>
     <p class="mudo peq ed-dica">Toque em <b>☰</b> para escolher da lista. Segure o <b>⠿</b> e arraste para mudar a ordem.</p>
     <div id="ex-lista">${exs.map(blocoExercicio).join('')}</div>
+    <p class="mudo ed-vazio" data-vazio hidden>Nenhum exercício ainda. Toque em <b>+ Adicionar exercício</b> para escolher o primeiro da lista.</p>
     <div class="ed-add-linha">
       <button class="btn secundario" type="button" data-ed="add">+ Adicionar exercício</button>
       <button class="btn secundario" type="button" data-ed="continuar">Salvar e continuar</button>
@@ -189,11 +192,12 @@ export function abrirEditorTreino(treino, opcoes = {}) {
   const el = folha.el;
   // O id é criado uma vez só: assim "Salvar e continuar" não cria treinos repetidos.
   const idSalvo = treino ? treino.id : novoId();
+  let jaContado = !!treino; // conquista do personal: conta só treino novo, uma vez
   const ordemInicial = treino ? treino.ordem : Date.now();
   const criadoInicial = treino ? treino.criadoEm : new Date().toISOString();
-  const atualizarCont = () => { const n = el.querySelectorAll('[data-ex]').length; el.querySelector('[data-cont]').textContent = `${n} ${n === 1 ? 'exercício' : 'exercícios'}`; };
+  const atualizarCont = () => { const n = el.querySelectorAll('[data-ex]').length; el.querySelector('[data-cont]').textContent = n ? `${n} ${n === 1 ? 'exercício' : 'exercícios'}` : ''; el.querySelector('[data-vazio]').hidden = n > 0; };
   atualizarCont();
-  const escolher = (bloco) => {
+  const escolher = (bloco, aoCancelar = null) => {
     const campo = bloco.querySelector('[data-f="nome"]');
     abrirEscolha((nome) => {
       campo.value = nome;
@@ -208,7 +212,7 @@ export function abrirEditorTreino(treino, opcoes = {}) {
       }
       const ser = bloco.querySelector('[data-f="series"]');
       if (ser && !ser.value && !bloco.classList.contains('cardio')) ser.focus();
-    }, '');
+    }, '', aoCancelar);
   };
   const erro = (t) => { const e = el.querySelector('[data-erro]'); e.textContent = t; if (t) e.scrollIntoView({ block: 'center' }); };
 
@@ -269,7 +273,8 @@ export function abrirEditorTreino(treino, opcoes = {}) {
       const novo = blocos[blocos.length - 1];
       atualizarCont();
       novo.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      escolher(novo);
+      // Fechou a lista sem escolher: não deixa um exercício sem nome sobrando.
+      escolher(novo, () => { if (!novo.querySelector('[data-f="nome"]').value.trim()) { novo.remove(); atualizarCont(); } });
     } else if (b.dataset.ed === 'salvar' || b.dataset.ed === 'continuar') {
       const d = coletar(el);
       if (!d.nome) return erro('Dê um nome para o treino.');
@@ -286,6 +291,7 @@ export function abrirEditorTreino(treino, opcoes = {}) {
         criadoEm: criadoInicial,
         atualizadoEm: new Date().toISOString()
       });
+      if (!jaContado) { jaContado = true; contar('treinos'); }
       toast(colecao === 'modelos' ? 'Modelo salvo.' : 'Treino salvo.');
       if (b.dataset.ed === 'salvar') { folha.fechar(); return; }
       // "Salvar e continuar": grava e deixa a janela aberta; os próximos salvamentos atualizam o mesmo treino.

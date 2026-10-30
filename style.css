@@ -1366,3 +1366,28 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
   .shell:has(.nav[hidden]) { padding-left: 0; }
   .shell:has(.nav[hidden]) .topbar-marca { visibility: visible; }
 }
+
+/* v42 assinatura em cartões */
+.assin-card{margin-top:12px}
+.assin-topo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+.assin-topo h2{margin:0}
+.assin-trilho{display:block;height:8px;border-radius:99px;background:var(--borda);overflow:hidden;margin:10px 0 4px}
+.assin-trilho i{display:block;height:100%;border-radius:99px;background:var(--limao)}
+.assin-sub{font-size:13px;letter-spacing:.04em;text-transform:uppercase;margin:16px 0 8px;opacity:.7}
+.assin-card.venc{border-color:var(--perigo)}
+.planos{display:grid;gap:8px}
+.plano{position:relative;display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 10px;padding:12px 14px;border:1px solid var(--borda);border-radius:14px}
+.plano .plano-nome{font-size:15px}
+.plano .mudo{grid-column:1}
+.plano .plano-preco{grid-column:2;grid-row:1 / span 2;font-weight:700;font-size:17px;text-align:right;white-space:nowrap}
+.plano .plano-preco small{font-size:12px;font-weight:400;opacity:.7}
+.plano.atual{border:2px solid var(--limao)}
+.plano-tag{position:absolute;top:-9px;left:12px;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--limao);color:var(--sobre-limao)}
+.planos{margin-top:14px}
+.ed-vazio{padding:14px;border:1px dashed var(--borda);border-radius:14px;text-align:center;margin:0 0 10px}
+
+/* v44 ficha do aluno em abas */
+.abas-aluno{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;margin:0 0 14px;background:var(--card);border:1px solid var(--borda);border-radius:14px;position:sticky;top:0;z-index:5}
+.aba-aluno{border:0;background:transparent;color:var(--mudo);font:inherit;font-weight:600;font-size:14px;padding:10px 4px;border-radius:10px;cursor:pointer}
+.aba-aluno[aria-selected="true"]{background:var(--limao);color:var(--sobre-limao)}
+.abas-aluno + .grade-cards, .abas-aluno + .card{margin-top:0}

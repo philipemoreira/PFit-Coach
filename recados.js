@@ -1,5 +1,6 @@
 // Recados entre aluno e personal (uma conversa simples, sem tempo real além do que o banco já dá).
 import { estado } from './estado.js';
+import { contar } from './conquistas-personal.js';
 import { abrirFolha } from './folha.js';
 import { escaparHtml, novoId, toast } from './util.js';
 import { salvarDoc } from './dados.js';
@@ -41,6 +42,7 @@ export function abrirRecados({ donoUid, meuPapel, titulo, lista }) {
     if (!texto) return;
     await salvarDoc(donoUid, 'recados', novoId(), { texto, de: meuPapel, autorUid: estado.uid, criadoEm: new Date().toISOString() });
     caixa.value = '';
+    if (meuPapel === 'personal') contar('recados');
     toast('Recado enviado.');
   });
   return f;

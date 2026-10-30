@@ -98,3 +98,48 @@ export function avisoFaixa() {
   if (n <= LIMITES[a.plano]) return '';
   return `<p class="alerta-atraso" role="status">⚠️ Você tem ${n} alunos, mas seu plano é até ${LIMITES[a.plano]}. Fale para ajustar a faixa e não perder o acesso.</p>`;
 }
+
+// Cartão da assinatura para a tela Minha conta: situação em cima e os planos em cartões embaixo.
+const planoCard = (nome, sub, preco, atual) => `<div class="plano ${atual ? 'atual' : ''}">
+  ${atual ? '<span class="plano-tag">Seu plano</span>' : ''}
+  <b class="plano-nome">${nome}</b><small class="mudo">${sub}</small>
+  <span class="plano-preco">${reais(preco)}<small>/mês</small></span></div>`;
+
+export function cartaoPlanos() {
+  const a = acesso();
+  if (a.estado === 'carregando') return '';
+  const personal = estado.perfil && estado.perfil.papel === 'personal';
+  if (a.origem === 'personal') {
+    const ok = a.estado === 'ativo';
+    return `<section class="card assin-card ${ok ? '' : 'venc'}"><div class="assin-topo"><h2>${ok ? 'Incluída no plano do personal' : 'Acesso pausado'}</h2></div>
+      <p class="mudo">${ok ? 'Seu acesso está incluído no plano do seu personal. Você não paga nada.' : 'A assinatura do seu personal venceu. Assim que ele renovar, seu acesso volta sozinho. Seus dados estão guardados.'}</p></section>`;
+  }
+  const venc = a.estado === 'vencido';
+  const pct = venc ? 0 : Math.max(4, Math.min(100, (a.dias / DIAS_TESTE) * 100));
+  const nome = a.plano === 'teste' ? 'Teste grátis' : 'Plano ativo';
+  return `<section class="card assin-card ${venc ? 'venc' : ''}">
+    <div class="assin-topo"><h2>${venc ? 'Seu acesso venceu' : nome}</h2>${venc ? '' : `<span class="selo">${a.dias} ${a.dias === 1 ? 'dia' : 'dias'}</span>`}</div>
+    <p class="mudo">${venc ? 'Seus dados continuam guardados. Para voltar a usar, renove a assinatura.' : `Vale até <strong>${dataBr(a.ate)}</strong>.`}</p>
+    ${venc ? '' : `<span class="assin-trilho" aria-hidden="true"><i style="width:${pct.toFixed(0)}%"></i></span>`}
+    <div class="acoes-card"><button class="btn ${venc ? '' : 'secundario'} cheio" type="button" data-acao="planos-abrir">Ver planos</button></div>
+  </section>`;
+}
+
+// Conteúdo da janela "Planos".
+export function folhaPlanos() {
+  const a = acesso();
+  const personal = estado.perfil && estado.perfil.papel === 'personal';
+  const venc = a.estado === 'vencido';
+  const faixa = personal ? faixaPorAlunos(estado.alunos.length) : 'aluno';
+  const marca = (k) => !venc && a.origem === 'proprio' && (a.plano === k || (a.plano === 'teste' && faixa === k));
+  const planos = personal
+    ? [planoCard('Até 5 alunos', 'Para começar', PRECOS.p5, marca('p5')),
+      planoCard('6 a 15 alunos', 'Para crescer', PRECOS.p15, marca('p15')),
+      planoCard('16 alunos ou mais', 'Sem limite', PRECOS.ilimitado, marca('ilimitado'))].join('')
+    : planoCard('Plano do aluno', 'Treino e dieta completos', PRECOS.aluno, marca('aluno'));
+  return `<h2>Planos</h2>
+    <p class="mudo peq">${personal ? 'O preço depende de quantos alunos você tem conectados.' : 'Tudo incluído: treino, dieta e progresso.'} Os 15 primeiros dias são grátis.</p>
+    <div class="planos ${personal ? '' : 'um'}">${planos}</div>
+    ${a.estado === 'ativo' && a.origem === 'proprio' && a.dias > 7 ? '' : comoPagar()}
+    <button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`;
+}
