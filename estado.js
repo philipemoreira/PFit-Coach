@@ -117,20 +117,39 @@ export function iniciarDados(uid, email, aoMudar) {
   }, (e) => console.error(e)));
 }
 
+let tentativasPersonal = 0;
+let timerPersonal = null;
 function ouvirAssinaturaDoPersonal(personalUid, aoMudar) {
   if (personalUid === personalOuvido) return;
   if (paradorPersonal) { paradorPersonal(); paradorPersonal = null; }
+  if (timerPersonal) { clearTimeout(timerPersonal); timerPersonal = null; }
   personalOuvido = personalUid;
+  tentativasPersonal = 0;
   estado.assinaturaPersonal = undefined;
   if (!personalUid) return;
-  paradorPersonal = onSnapshot(doc(db, 'assinaturas', personalUid), (snap) => {
-    if (!snap.exists() && snap.metadata && snap.metadata.fromCache) return;
-    estado.assinaturaPersonal = snap.exists() ? { ...snap.data() } : null;
-    aoMudar('assinaturaPersonal');
-  }, (e) => { console.error(e); estado.assinaturaPersonal = null; aoMudar('assinaturaPersonal'); });
+  const iniciar = () => {
+    paradorPersonal = onSnapshot(doc(db, 'assinaturas', personalUid), (snap) => {
+      if (!snap.exists() && snap.metadata && snap.metadata.fromCache) return;
+      tentativasPersonal = 0;
+      estado.assinaturaPersonal = snap.exists() ? { ...snap.data() } : null;
+      aoMudar('assinaturaPersonal');
+    }, (e) => {
+      console.error(e);
+      // Logo depois de ligar ao personal, o servidor pode ainda não ter registrado o vínculo e nega a leitura.
+      // Em vez de achar que "venceu", tenta de novo algumas vezes.
+      if (personalOuvido !== personalUid) return;
+      paradorPersonal = null;
+      if (tentativasPersonal < 6) {
+        tentativasPersonal += 1;
+        timerPersonal = setTimeout(() => { timerPersonal = null; if (personalOuvido === personalUid) iniciar(); }, 1000 * tentativasPersonal);
+      } else { estado.assinaturaPersonal = null; aoMudar('assinaturaPersonal'); }
+    });
+  };
+  iniciar();
 }
 
 export function pararDados() {
+  if (timerPersonal) { clearTimeout(timerPersonal); timerPersonal = null; }
   if (paradorPersonal) { paradorPersonal(); paradorPersonal = null; }
   personalOuvido = null;
   paradores.forEach((p) => p());
