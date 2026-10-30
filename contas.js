@@ -69,6 +69,14 @@ export function aposSair() {
   if (proximo !== slotAtual) { gravar(CHAVE_SLOT, proximo); recarregar(); }
 }
 
+// Este espaço não tem sessão (conta apagada ou sessão expirada): tira da lista. Devolve true se estava na lista.
+export function esquecerSeSemSessao() {
+  const l = lerContas();
+  if (!l.some((c) => c.slot === slotAtual)) return false;
+  salvarLista(l.filter((c) => c.slot !== slotAtual));
+  return true;
+}
+
 export function abrirContas() {
   const lista = lerContas();
   if (!lista.some((c) => c.slot === slotAtual)) lista.unshift({ slot: slotAtual, email: '', nome: '' });

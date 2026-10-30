@@ -1,6 +1,6 @@
 // Ponto de partida do app: decide qual tela mostrar e liga os cliques às ações.
 import { configurado, auth, onAuthStateChanged, signOut } from './firebase.js';
-import { registrarConta, aposSair, cancelarAdicionar } from './contas.js';
+import { registrarConta, aposSair, cancelarAdicionar, esquecerSeSemSessao } from './contas.js';
 import { estado, iniciarDados, pararDados, dietaLiberada } from './estado.js';
 import { toast, escaparHtml } from './util.js';
 import { nav } from './nav.js';
@@ -255,6 +255,7 @@ if (!configurado) {
       pararPersonal();
       pararDados();
       boasVistas = false;
+      if (esquecerSeSemSessao()) toast('A sessão dessa conta acabou. Entre de novo.');
     }
     escolherTela();
   });

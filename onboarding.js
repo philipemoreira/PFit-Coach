@@ -19,6 +19,9 @@ export function idadeDe(nasc) {
 }
 
 // Estimativa (fórmula de Mifflin-St Jeor). É só uma sugestão para começar, não substitui nutricionista.
+// Aceita 183 (cm) ou 1,83 (metros).
+const alturaEmCm = (v) => { const n = numero(v); return n !== null && n >= 1 && n < 3 ? Math.round(n * 100) : n; };
+
 export function sugerirMetas({ sexo, nascimento, alturaCm, pesoKg, objetivo, diasSemana }) {
   const idade = idadeDe(nascimento);
   if (!pesoKg) return null;
@@ -60,7 +63,7 @@ function htmlPasso(id) {
     <label class="campo">Data de nascimento<input class="in" type="date" data-ob-campo="nascimento" max="${dataLocal()}" value="${escaparHtml(d.nascimento || '')}"></label>
     <h3 class="sub-ob">Sexo</h3>${chips(SEXOS, d.sexo, 'sexo')}
     <div class="grade2">
-      <label class="campo">Altura (cm)<input class="in" inputmode="numeric" data-ob-campo="alturaCm" placeholder="Ex.: 170" value="${escaparHtml(d.alturaCm || '')}"></label>
+      <label class="campo">Altura (cm)<input class="in" inputmode="numeric" data-ob-campo="alturaCm" placeholder="Ex.: 170 (ou 1,70)" value="${escaparHtml(d.alturaCm || '')}"></label>
       <label class="campo">Peso (kg)<input class="in" inputmode="decimal" data-ob-campo="pesoKg" placeholder="Ex.: 72,5" value="${escaparHtml(d.pesoKg || '')}"></label>
     </div>`;
   if (id === 'saude') return `
@@ -103,7 +106,7 @@ function coletar() {
 
 function calcularMetas() {
   const d = ob.dados;
-  ob.metas = sugerirMetas({ sexo: d.sexo, nascimento: d.nascimento, alturaCm: numero(d.alturaCm), pesoKg: numero(d.pesoKg), objetivo: d.objetivo, diasSemana: d.diasSemana });
+  ob.metas = sugerirMetas({ sexo: d.sexo, nascimento: d.nascimento, alturaCm: alturaEmCm(d.alturaCm), pesoKg: numero(d.pesoKg), objetivo: d.objetivo, diasSemana: d.diasSemana });
   ob.editMetas = {};
 }
 
@@ -135,7 +138,7 @@ function fechar() {
 function validarPasso(id) {
   const d = ob.dados;
   if (id === 'corpo') {
-    const al = d.alturaCm ? numero(d.alturaCm) : null;
+    const al = d.alturaCm ? alturaEmCm(d.alturaCm) : null;
     const pe = d.pesoKg ? numero(d.pesoKg) : null;
     if ((d.alturaCm && (al === null || al < 100 || al > 250)) || (d.pesoKg && (pe === null || pe < 20 || pe > 400))) return 'Confira altura (em cm) e peso (em kg).';
     if (d.nascimento && idadeDe(d.nascimento) === null) return 'Confira a data de nascimento.';
@@ -162,7 +165,7 @@ function gravar() {
   const ana = { atualizadoEm: new Date().toISOString() };
   ['objetivo', 'nivel', 'sexo', 'nascimento', 'saudeObs', 'restricoes'].forEach((k) => { if (d[k]) ana[k] = d[k]; });
   if (d.diasSemana) ana.diasSemana = d.diasSemana;
-  if (numero(d.alturaCm)) ana.alturaCm = numero(d.alturaCm);
+  if (alturaEmCm(d.alturaCm)) ana.alturaCm = alturaEmCm(d.alturaCm);
   const temSaude = (d.condicoes || []).length || d.saudeObs || d.restricoes;
   ana.condicoes = d.consentimento ? (d.condicoes || []) : [];
   if (!d.consentimento) { delete ana.saudeObs; delete ana.restricoes; } else if (temSaude) ana.consentimentoSaude = true;
