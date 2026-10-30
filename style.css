@@ -1359,3 +1359,10 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 .como-erros { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .como-erros li { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 1.45; color: var(--mudo); }
 .como-erros li::before { content: '!'; flex: none; width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 90, 80, .18); color: #ff6b5e; font-size: 12px; font-weight: 800; display: grid; place-items: center; margin-top: 1px; }
+
+/* v41: menu escondido de verdade (conta de personal com uma aba só, ou assinatura vencida) */
+.nav[hidden] { display: none !important; }
+@media (min-width: 900px) {
+  .shell:has(.nav[hidden]) { padding-left: 0; }
+  .shell:has(.nav[hidden]) .topbar-marca { visibility: visible; }
+}

@@ -9,7 +9,7 @@ import { nav } from './nav.js';
 import { metaVolume, metaAgua, metaPeso, metaMacros, formatarVolume } from './metricas.js';
 import { abrirPrivacidade, abrirTermos, abrirExclusao } from './conta.js';
 import { abrirAjuda } from './ajuda.js';
-import { abrirOnboarding, resumoAnamnese } from './onboarding.js';
+import { abrirOnboarding, resumoAnamnese, idadeDe } from './onboarding.js';
 import { corpoAssinatura, bloqueado } from './assinatura.js';
 
 const COLECOES = ['treinos', 'regras', 'dietaItens', 'sessoes', 'peso', 'checks', 'agua', 'medidas', 'alimentos', 'refeicoes'];
@@ -61,7 +61,7 @@ async function restaurarBackup(arquivo) {
   }
 }
 
-function cartaoPersonal(souPersonal) {
+function cartaoPersonal() {
   const v = estado.vinculo;
   if (v) {
     return `
@@ -81,8 +81,22 @@ function cartaoPersonal(souPersonal) {
     <p class="mudo peq">Tem um personal? Digite o código que ele te passou. Ele poderá ver seus treinos, dieta, peso e medidas, e montar seu treino e sua dieta.</p>
     <div class="acoes-card">
       <button class="btn secundario cheio" type="button" data-acao="vinculo-conectar">Tenho um código de personal</button>
-      ${souPersonal ? '' : '<button class="btn secundario cheio" type="button" data-acao="personal-ativar">Sou personal: ativar aba Alunos</button>'}
     </div>
+  </section>`;
+}
+
+// Conta de personal: só os dados pessoais dele (nome, e-mail, idade). Nada de treino ou dieta próprios.
+function cartaoDadosPersonal(p) {
+  const idade = idadeDe(p.nascimento);
+  return `
+  <section class="card">
+    <h2>Dados pessoais</h2>
+    <div class="lista-metas">
+      <div><span>Nome</span><strong>${escaparHtml(p.nome || '')}</strong></div>
+      <div><span>E-mail</span><strong>${escaparHtml(estado.email || '')}</strong></div>
+      <div><span>Data de nascimento</span><strong>${p.nascimento ? `${escaparHtml(formatarDataCurta(p.nascimento))}${idade !== null ? ` · ${idade} anos` : ''}` : 'não informada'}</strong></div>
+    </div>
+    <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="personal-dados">${p.nascimento ? 'Editar data de nascimento' : 'Informar data de nascimento'}</button></div>
   </section>`;
 }
 
@@ -220,7 +234,9 @@ export const contaTela = {
       </div>
       ${assin ? `<div class="conta-assin ${assin.cls}">${assin.html}</div>` : ''}
     </section>
-    ${secao(personal ? 'Personal e alunos' : 'Meu personal', personal ? 'Sua conta de personal e a conexão com seu próprio personal, se tiver.' : 'Conecte-se ao seu personal para ele montar seu treino e sua dieta.', cartaoPersonal(personal))}
+    ${personal
+    ? secao('Seus dados', 'As informações do seu perfil de personal.', cartaoDadosPersonal(p))
+    : `${secao('Meu personal', 'Conecte-se ao seu personal para ele montar seu treino e sua dieta.', cartaoPersonal())}
     ${secao('Sobre você', 'Suas respostas iniciais. Ajudam o app e o seu personal.', `
     <section class="card">
       <h2>Meus dados e saúde</h2>
@@ -228,10 +244,10 @@ export const contaTela = {
     ? `<div class="lista-metas">${resumoAnamnese(p.anamnese).map(([k, v]) => `<div><span>${escaparHtml(k)}</span><strong>${escaparHtml(v)}</strong></div>`).join('')}</div>`
     : '<p class="mudo peq">Você ainda não respondeu. Leva 1 minuto e o app já sugere suas metas.</p>'}
       <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="onboarding-refazer">${p.anamnese ? 'Atualizar respostas' : 'Responder agora'}</button></div>
-    </section>`)}
+    </section>`)}`}
     <section class="secao">
       <div class="linhas">
-        ${linha('aba', 'Configurações', 'Tema, metas, backup e privacidade', 'data-aba="config"')}
+        ${linha('aba', 'Configurações', personal ? 'Tema e privacidade' : 'Tema, metas, backup e privacidade', 'data-aba="config"')}
         ${linha('ajuda', 'Ajuda', 'Como usar o app e falar com o suporte')}
       </div>
     </section>
@@ -246,10 +262,22 @@ export const contaTela = {
     'onboarding-refazer': () => abrirOnboarding({ refazer: true }),
     ajuda: () => abrirAjuda(),
     'conta-excluir': () => abrirExclusao(),
-    'personal-ativar': async () => {
-      if (!(await confirmar('Ativar a aba Alunos? Você poderá convidar alunos e montar treinos para eles. Seus próprios treinos continuam funcionando normalmente.', { ok: 'Ativar' }))) return;
-      salvarPerfil(estado.uid, { papel: 'personal' }, { merge: true });
-      toast('Aba Alunos ativada.');
+    'personal-dados': () => {
+      const atual = (estado.perfil || {}).nascimento || '';
+      const f = abrirFolha(`
+        <h2>Data de nascimento</h2>
+        <label class="campo">Sua data de nascimento<input class="in" type="date" data-f="nasc" max="${dataLocal()}" value="${escaparHtml(atual)}"></label>
+        <p class="erro" data-erro role="alert"></p>
+        <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Cancelar</button><button class="btn" type="button" data-ed="salvar">Salvar</button></div>`);
+      f.el.addEventListener('click', (e) => {
+        if (!e.target.closest('[data-ed="salvar"]')) return;
+        const v = f.el.querySelector('[data-f="nasc"]').value;
+        const idade = idadeDe(v);
+        if (!v || idade === null || idade < 14 || idade > 110) { f.el.querySelector('[data-erro]').textContent = 'Escolha uma data de nascimento válida.'; return; }
+        salvarPerfil(estado.uid, { nascimento: v }, { merge: true });
+        f.fechar();
+        toast('Data de nascimento salva.');
+      });
     },
     'vinculo-desligar': async () => {
       if (!(await confirmar('Desligar do seu personal? Ele deixa de ver seus dados e de montar seu treino. O que já foi montado fica com você, e você volta a poder editar.', { ok: 'Desligar', perigo: true }))) return;
@@ -386,6 +414,7 @@ export const contaTela = {
 export const configTela = {
   render() {
     const m = metaMacros();
+    const personal = !!(estado.perfil && estado.perfil.papel === 'personal');
     return `
     ${topoSub('Configurações')}
     ${secao('Aparência', 'Escolha como o app aparece. A mudança é na hora.', `
@@ -395,7 +424,7 @@ export const configTela = {
       </div>
       <p class="mudo peq dica-tema">Automático acompanha o modo claro ou escuro do seu aparelho.</p>
     </section>`)}
-    ${secao('Metas', 'O que você quer alcançar a cada dia.', `
+    ${personal ? '' : secao('Metas', 'O que você quer alcançar a cada dia.', `
     <section class="card">
       ${estado.vinculo ? '<p class="mudo peq">Definidas pelo seu personal.</p>' : ''}
       <div class="lista-metas">
@@ -408,11 +437,11 @@ export const configTela = {
       ${estado.vinculo ? '' : '<div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="metas-editar">Mudar metas</button></div>'}
     </section>`)}
     <section class="secao">
-      <div class="secao-cab"><h2>Dados e privacidade</h2><p>Guarde uma cópia, leia as regras ou apague tudo. As fotos não entram no backup.</p></div>
+      <div class="secao-cab"><h2>Dados e privacidade</h2><p>${personal ? 'Leia as regras do app ou apague a conta.' : 'Guarde uma cópia, leia as regras ou apague tudo. As fotos não entram no backup.'}</p></div>
       <input type="file" id="arq-backup" accept="application/json,.json" hidden data-mudar="backup-arquivo">
       <div class="linhas">
-        ${linha('backup-baixar', 'Salvar backup', 'Treinos, dieta, histórico, peso e medidas')}
-        ${linha('backup-restaurar', 'Restaurar backup', 'Volta os dados de um arquivo salvo')}
+        ${personal ? '' : `${linha('backup-baixar', 'Salvar backup', 'Treinos, dieta, histórico, peso e medidas')}
+        ${linha('backup-restaurar', 'Restaurar backup', 'Volta os dados de um arquivo salvo')}`}
         ${linha('privacidade', 'Privacidade', 'Como seus dados são usados')}
         ${linha('termos', 'Termos de uso', 'As regras do app')}
       </div>

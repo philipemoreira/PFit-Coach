@@ -23,17 +23,18 @@ export function abrirAjuda() {
   const html = `
     <h2>Ajuda</h2>
     <p class="mudo peq">Toque em um assunto para abrir.</p>
-    ${topico('Como o app funciona', '<p>O app tem 4 abas: <b>Hoje</b> (o que fazer agora), <b>Treinos</b> (seus treinos), <b>Dieta</b> (lista de alimentos por refeição) e <b>Progresso</b> (gráficos e histórico). Toque na sua inicial, no canto de cima, para abrir <b>Minha conta</b> e as <b>Configurações</b> (tema, metas, backup).' + (personal ? ' Como você é personal, também tem a aba <b>Alunos</b>.' : '') + '</p>')}
-    ${topico('Fazer um treino', '<p>Na aba <b>Hoje</b>, toque em <b>Começar</b> no treino do dia. Marque cada série como feita, digite a carga e as repetições. O descanso começa sozinho. No fim, toque em <b>Finalizar</b>.</p><p>Toque no número da série para marcar <b>A</b> (aquecimento, não conta no volume), <b>D</b> (drop) ou <b>F</b> (falha). O botão <b>?</b> ao lado do nome do exercício mostra como fazer.</p>')}
-    ${topico('Montar treino e dieta', '<p>Em <b>Treinos</b>, toque em <b>Novo treino</b>, escolha os dias e adicione os exercícios (as sugestões aparecem enquanto você digita). Em <b>Dieta</b>, monte a lista de alimentos de cada refeição. A lista é igual todos os dias: você só toca no quadrado quando comer o previsto, ou diz outra quantidade.</p><p>Se você tem um personal, ele monta seu treino e sua dieta, e você só executa.</p>')}
-    ${topico('Calorias, água e metas', '<p>Na aba <b>Hoje</b> você anota a água e o que comeu. As metas (volume, água, peso, calorias) ficam em <b>Configurações → Metas</b>. Se você tem personal, ele define as suas metas.</p>')}
-    ${topico('Progresso e fotos', '<p>Em <b>Progresso</b> você vê treinos da semana, volume levantado, peso, medidas, calorias e conquistas. As fotos do corpo ficam guardadas só para você, a não ser que escolha compartilhar com seu personal.</p>')}
-    ${topico('Conectar com um personal', '<p>Peça o código de 8 letras ao seu personal e digite em <b>Minha conta → Tenho um código de personal</b>. Para se desligar, use o mesmo lugar. Seus dados ficam com você.</p>')}
+    ${personal ? topico('Como o app funciona', '<p>Sua conta é de <b>personal</b>: serve para montar o treino e a dieta dos seus alunos e acompanhar o progresso deles. Tudo fica na aba <b>Alunos</b>. Se você também quer treinar, crie uma conta de aluno (com outro e-mail) e conecte com o seu próprio código.</p>') : ''}
+    ${personal ? '' : topico('Como o app funciona', '<p>O app tem 4 abas: <b>Hoje</b> (o que fazer agora), <b>Treinos</b> (seus treinos), <b>Dieta</b> (lista de alimentos por refeição) e <b>Progresso</b> (gráficos e histórico). Toque na sua inicial, no canto de cima, para abrir <b>Minha conta</b> e as <b>Configurações</b> (tema, metas, backup).' + (personal ? ' Como você é personal, também tem a aba <b>Alunos</b>.' : '') + '</p>')}
+    ${personal ? '' : topico('Fazer um treino', '<p>Na aba <b>Hoje</b>, toque em <b>Começar</b> no treino do dia. Marque cada série como feita, digite a carga e as repetições. O descanso começa sozinho. No fim, toque em <b>Finalizar</b>.</p><p>Toque no número da série para marcar <b>A</b> (aquecimento, não conta no volume), <b>D</b> (drop) ou <b>F</b> (falha). O botão <b>?</b> ao lado do nome do exercício mostra como fazer.</p>')}
+    ${personal ? '' : topico('Montar treino e dieta', '<p>Em <b>Treinos</b>, toque em <b>Novo treino</b>, escolha os dias e adicione os exercícios (as sugestões aparecem enquanto você digita). Em <b>Dieta</b>, monte a lista de alimentos de cada refeição. A lista é igual todos os dias: você só toca no quadrado quando comer o previsto, ou diz outra quantidade.</p><p>Se você tem um personal, ele monta seu treino e sua dieta, e você só executa.</p>')}
+    ${personal ? '' : topico('Calorias, água e metas', '<p>Na aba <b>Hoje</b> você anota a água e o que comeu. As metas (volume, água, peso, calorias) ficam em <b>Configurações → Metas</b>. Se você tem personal, ele define as suas metas.</p>')}
+    ${personal ? '' : topico('Progresso e fotos', '<p>Em <b>Progresso</b> você vê treinos da semana, volume levantado, peso, medidas, calorias e conquistas. As fotos do corpo ficam guardadas só para você, a não ser que escolha compartilhar com seu personal.</p>')}
+    ${personal ? '' : topico('Conectar com um personal', '<p>Peça o código de 8 letras ao seu personal e digite em <b>Minha conta → Tenho um código de personal</b>. Para se desligar, use o mesmo lugar. Seus dados ficam com você.</p>')}
     ${personal ? topico('Para personal: convidar alunos', '<p>Na aba <b>Alunos</b> está o seu código de convite. Passe para o aluno. Toque no aluno para montar treino, dieta e metas, ver o progresso e mandar recados. Você também pode salvar <b>modelos</b> de treino e aplicar em qualquer aluno.</p>') : ''}
     ${topico('Instalar no celular', '<p><b>iPhone (Safari):</b> toque no botão de compartilhar (quadrado com seta), depois em <b>Adicionar à Tela de Início</b>.</p><p><b>Android (Chrome):</b> toque nos três pontinhos e em <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b>).</p><p>Depois disso o app abre em tela cheia, como um aplicativo.</p>')}
     ${topico('Sem internet', '<p>O app guarda seus dados no aparelho e continua funcionando sem internet. Quando a conexão volta, ele sincroniza sozinho.</p>')}
     ${topico('Assinatura', '<p>Toda conta começa com 15 dias grátis. Alunos conectados a um personal não pagam enquanto o plano do personal estiver em dia. Veja os detalhes em <b>Minha conta → Assinatura</b>.</p>')}
-    ${topico('Meus dados e privacidade', '<p>Em <b>Configurações → Dados e privacidade</b> você salva um backup. Em <b>Privacidade</b> e <b>Termos de uso</b> estão as regras do app. Você pode excluir sua conta e todos os dados quando quiser, em <b>Configurações → Excluir minha conta</b>.</p>')}
+    ${topico('Meus dados e privacidade', '<p>Em <b>Configurações → Dados e privacidade</b> ' + (personal ? '' : 'você salva um backup.') + ' Em <b>Privacidade</b> e <b>Termos de uso</b> estão as regras do app. Você pode excluir sua conta e todos os dados quando quiser, em <b>Configurações → Excluir minha conta</b>.</p>')}
     ${temSuporte() ? `<a class="btn cheio" href="${escaparHtml(linkSuporte())}" target="_blank" rel="noopener">Falar com o suporte</a>` : ''}
     <button class="btn secundario cheio" type="button" data-ed="boas">Ver as boas-vindas de novo</button>
     <button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`;
@@ -43,6 +44,13 @@ export function abrirAjuda() {
   });
 }
 
+const PASSOS_PERSONAL = [
+  ['👋', 'Bem-vindo ao PFit Coach', 'Esta é a sua conta de personal: serve para montar o treino e a dieta dos seus alunos e acompanhar o que eles fazem.'],
+  ['🤝', 'Convide seus alunos', 'Na aba Alunos você gera um código de convite. O aluno cria a conta dele, digita o código, e aparece na sua lista.'],
+  ['📋', 'Monte treino e dieta', 'Toque em um aluno para montar o treino, a dieta e as metas dele. Salve modelos para reaproveitar em outros alunos.'],
+  ['📈', 'Acompanhe e converse', 'Veja os treinos feitos, as anotações, o peso e as medidas do aluno, e mande recados direto pelo app.']
+];
+
 const PASSOS = [
   ['👋', 'Bem-vindo ao PFit Coach', 'Treino, dieta e progresso num lugar só, simples de usar no celular e no computador.'],
   ['🏋️', 'Treine sem complicação', 'Abra a aba Hoje, toque em Começar, marque as séries e deixe o descanso por conta do app. Ele guarda suas cargas e mostra quando você bate um recorde.'],
@@ -50,18 +58,21 @@ const PASSOS = [
   ['🤝', 'Tem um personal?', 'Em Minha conta (toque na engrenagem, no topo), digite o código que ele te passou. Ele monta seu treino e sua dieta, e você só executa.']
 ];
 
+const souPersonalAjuda = () => !!(estado.perfil && estado.perfil.papel === 'personal');
+
 export function abrirBoasVindas(marcar = true) {
   let i = 0;
   const f = abrirFolha('<div id="boas"></div>', { fixo: true });
   const pintar = () => {
-    const [ico, tit, txt] = PASSOS[i];
-    const ultimo = i === PASSOS.length - 1;
+    const lista = souPersonalAjuda() ? PASSOS_PERSONAL : PASSOS;
+    const [ico, tit, txt] = lista[i];
+    const ultimo = i === lista.length - 1;
     f.el.querySelector('#boas').innerHTML = `
       <div class="boas">
         <div class="boas-ico" aria-hidden="true">${ico}</div>
         <h2>${escaparHtml(tit)}</h2>
         <p>${escaparHtml(txt)}</p>
-        <div class="boas-pontos" aria-hidden="true">${PASSOS.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+        <div class="boas-pontos" aria-hidden="true">${lista.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
         <div class="linha-botoes">
           ${ultimo ? '' : '<button class="btn secundario" type="button" data-ed="pular">Pular</button>'}
           <button class="btn" type="button" data-ed="${ultimo ? 'fim' : 'prox'}">${ultimo ? 'Começar' : 'Continuar'}</button>

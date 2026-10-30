@@ -153,8 +153,9 @@ export function pararDados() {
   estado.assinaturaPersonal = undefined;
 }
 
-// A dieta só é liberada para quem tem personal (ou é personal). Enquanto o app ainda não sabe, não tranca.
+// A dieta só é liberada para quem tem personal, ou para a conta marcada com dietaLiberada (interruptor manual no Firestore:
+// usuarios/{uid}.dietaLiberada = true). A conta de personal não treina nem tem dieta própria. Enquanto o app ainda não sabe, não tranca.
 export function dietaLiberada() {
   if (!estado.vinculoCarregado || !estado.perfil) return true;
-  return !!estado.vinculo || estado.perfil.papel === 'personal';
+  return !!estado.vinculo || estado.perfil.dietaLiberada === true;
 }

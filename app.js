@@ -61,7 +61,10 @@ ACOES['sair-direto'] = () => signOut(auth);
 
 const souPersonal = () => !!(estado.perfil && estado.perfil.papel === 'personal');
 // Com a assinatura vencida só ficam Minha conta e Configurações (sem menu de baixo).
-const abasVisiveis = () => (bloqueado() ? [] : ABAS.filter((a) => !a.soPersonal || souPersonal()));
+// Conta de personal = só o trabalho de coach (aba Alunos). Conta de aluno = Hoje, Treinos, Dieta e Progresso.
+const abasVisiveis = () => (bloqueado() ? [] : ABAS.filter((a) => (souPersonal() ? !!a.soPersonal : !a.soPersonal)));
+// Com uma aba só, o menu de baixo não é necessário.
+const mostrarMenu = () => abasVisiveis().length > 1;
 let navAssinatura = '';
 const assinaturaMenu = () => abasVisiveis().map((a) => a.id).join(',') + (dietaLiberada() ? '' : ':sem-dieta');
 
@@ -97,12 +100,15 @@ function htmlBarra() {
 }
 
 function montarPrincipal() {
+  // Entrou (ou entrou de novo): começa sempre na primeira aba, nunca na tela em que a pessoa tinha saído.
+  abaAtual = abasVisiveis().length ? abasVisiveis()[0].id : 'conta';
+  pilha = [];
   navAssinatura = assinaturaMenu();
   app.innerHTML = `
     <div class="shell">
       <header id="topbar" class="topbar">${htmlBarra()}</header>
       <main id="conteudo" class="conteudo" tabindex="-1"></main>
-      <nav class="nav" aria-label="Menu principal" ${abasVisiveis().length ? '' : 'hidden'}>${htmlNav()}
+      <nav class="nav" aria-label="Menu principal" ${mostrarMenu() ? '' : 'hidden'}>${htmlNav()}
       </nav>
     </div>`;
 }
@@ -124,7 +130,7 @@ function renderizar() {
   if (assin !== navAssinatura) {
     navAssinatura = assin;
     const menu = document.querySelector('.nav');
-    if (menu) { menu.innerHTML = htmlNav(); menu.hidden = abasVisiveis().length === 0; }
+    if (menu) { menu.innerHTML = htmlNav(); menu.hidden = !mostrarMenu(); }
   }
   if (abaAtual === 'dieta' && !dietaLiberada()) abaAtual = 'hoje';
   if (!ehExtra(abaAtual) && !abasVisiveis().some((a) => a.id === abaAtual)) abaAtual = abasVisiveis().length ? abasVisiveis()[0].id : 'conta';
