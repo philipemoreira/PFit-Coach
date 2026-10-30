@@ -211,8 +211,8 @@ function htmlSeries(ex, i) {
     </div>`;
 }
 
-// Quebra o texto da dica em passos (uma frase por passo).
-const passosDe = (txt) => String(txt).split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+// Exercícios em que a respiração é livre (isométricos): não mostra a regra geral.
+const SEM_RESP = new Set(['Prancha', 'Prancha lateral', 'Dead hang (pendurar na barra)', 'Caminhada do fazendeiro', 'Dead bug']);
 
 const videoOculto = () => { try { return localStorage.getItem('treino-video-oculto') === '1'; } catch { return false; } };
 
@@ -238,7 +238,13 @@ function htmlMidia(ex) {
         ${dica ? '<button type="button" class="busca-ex como-btn" data-t="como-toggle" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>Como fazer</span></button>' : ''}
         <a class="busca-ex" href="${escaparHtml(urlBuscaGoogle(ex.nome))}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15 15l5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span>Pesquisar <small>no Google</small></span></a>
       </div>
-      ${dica ? `<div class="como-passos" hidden><h4>Passo a passo</h4><ol>${passosDe(dica.texto).map((p) => `<li>${escaparHtml(p)}</li>`).join('')}</ol><p class="mudo peq">Dica geral. Se sentir dor (não é o cansaço normal do músculo), pare e procure um profissional.</p></div>` : ''}
+      ${dica ? `<div class="como-passos" hidden>
+        <p class="como-musc"><b>Músculos:</b> ${escaparHtml(dica.musculos)}</p>
+        <h4>Posição inicial</h4><ol>${dica.preparo.map((p) => `<li>${escaparHtml(p)}</li>`).join('')}</ol>
+        <h4>Como fazer</h4><ol>${dica.execucao.map((p) => `<li>${escaparHtml(p)}</li>`).join('')}</ol>
+        <h4>Erros comuns</h4><ul class="como-erros">${dica.erros.map((p) => `<li>${escaparHtml(p)}</li>`).join('')}</ul>
+        <p class="mudo peq">${SEM_RESP.has(ex.nome) ? '' : 'Respiração: em geral, solte o ar ao fazer força e puxe o ar ao voltar. '}Dica geral. Se sentir dor (não é o cansaço normal do músculo), pare e procure um profissional.</p>
+      </div>` : ''}
       ${v ? `<div class="midia-cab"><b>Vídeo do exercício</b><button type="button" class="link" data-t="video-toggle">${oculto ? 'Mostrar' : 'Recolher'}</button></div>
       <div class="midia-corpo" ${oculto ? 'hidden' : ''}>${corpo}</div>` : ''}
     </div>`;

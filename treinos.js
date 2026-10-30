@@ -176,7 +176,10 @@ export function abrirEditorTreino(treino, opcoes = {}) {
     <div class="ed-cab"><h3>Exercícios</h3><span class="mudo peq" data-cont></span></div>
     <p class="mudo peq ed-dica">Toque em <b>☰</b> para escolher da lista. Segure o <b>⠿</b> e arraste para mudar a ordem.</p>
     <div id="ex-lista">${exs.map(blocoExercicio).join('')}</div>
-    <button class="btn secundario cheio" type="button" data-ed="add">+ Adicionar exercício</button>
+    <div class="ed-add-linha">
+      <button class="btn secundario" type="button" data-ed="add">+ Adicionar exercício</button>
+      <button class="btn secundario" type="button" data-ed="continuar">Salvar e continuar</button>
+    </div>
     <p class="erro" data-erro role="alert"></p>
     <div class="linha-botoes ed-rodape">
       ${treino ? '<button class="btn perigo-claro" type="button" data-ed="excluir">Excluir</button>' : '<button class="btn secundario" type="button" data-fechar>Cancelar</button>'}
@@ -184,12 +187,25 @@ export function abrirEditorTreino(treino, opcoes = {}) {
     </div>`, { classe: 'folha-alta' });
 
   const el = folha.el;
+  // O id é criado uma vez só: assim "Salvar e continuar" não cria treinos repetidos.
+  const idSalvo = treino ? treino.id : novoId();
+  const ordemInicial = treino ? treino.ordem : Date.now();
+  const criadoInicial = treino ? treino.criadoEm : new Date().toISOString();
   const atualizarCont = () => { const n = el.querySelectorAll('[data-ex]').length; el.querySelector('[data-cont]').textContent = `${n} ${n === 1 ? 'exercício' : 'exercícios'}`; };
   atualizarCont();
   const escolher = (bloco) => {
     const campo = bloco.querySelector('[data-f="nome"]');
     abrirEscolha((nome) => {
       campo.value = nome;
+      // Escolheu do grupo Cardio: marca "Cardio" e vai direto para os minutos.
+      if (BASE.Cardio.includes(nome)) {
+        const chk = bloco.querySelector('[data-f="cardio"]');
+        chk.checked = true;
+        bloco.classList.add('cardio');
+        const min = bloco.querySelector('[data-f="minutos"]');
+        if (min && !min.value) min.focus();
+        return;
+      }
       const ser = bloco.querySelector('[data-f="series"]');
       if (ser && !ser.value && !bloco.classList.contains('cardio')) ser.focus();
     }, '');
@@ -254,7 +270,7 @@ export function abrirEditorTreino(treino, opcoes = {}) {
       atualizarCont();
       novo.scrollIntoView({ block: 'center', behavior: 'smooth' });
       escolher(novo);
-    } else if (b.dataset.ed === 'salvar') {
+    } else if (b.dataset.ed === 'salvar' || b.dataset.ed === 'continuar') {
       const d = coletar(el);
       if (!d.nome) return erro('Dê um nome para o treino.');
       if (!d.exercicios.length) return erro('Adicione pelo menos um exercício.');
@@ -264,14 +280,20 @@ export function abrirEditorTreino(treino, opcoes = {}) {
       if (videoRuim) return erro(`Não reconheci o vídeo de "${videoRuim.nome}". Use um link https:// do YouTube ou de um arquivo .mp4, ou o caminho videos/nome.mp4.`);
       const semSeries = d.exercicios.find((x) => !x.cardio && !(x.series >= 1));
       if (semSeries) return erro(`Informe quantas séries tem em "${semSeries.nome}".`);
-      salvarDoc(uidAlvo, colecao, treino ? treino.id : novoId(), {
+      salvarDoc(uidAlvo, colecao, idSalvo, {
         ...d,
-        ordem: treino ? treino.ordem : Date.now(),
-        criadoEm: treino ? treino.criadoEm : new Date().toISOString(),
+        ordem: ordemInicial,
+        criadoEm: criadoInicial,
         atualizadoEm: new Date().toISOString()
       });
-      folha.fechar();
       toast(colecao === 'modelos' ? 'Modelo salvo.' : 'Treino salvo.');
+      if (b.dataset.ed === 'salvar') { folha.fechar(); return; }
+      // "Salvar e continuar": grava e deixa a janela aberta; os próximos salvamentos atualizam o mesmo treino.
+      erro('');
+      const cancelar = el.querySelector('.ed-rodape [data-fechar]');
+      if (cancelar) cancelar.textContent = 'Fechar';
+      b.textContent = 'Salvo ✓';
+      setTimeout(() => { b.textContent = 'Salvar e continuar'; }, 1500);
     } else if (b.dataset.ed === 'excluir') {
       if (await confirmar(`Excluir o treino "${treino.nome}"? Seu histórico de treinos feitos não é apagado.`, { ok: 'Excluir', perigo: true })) {
         removerDoc(uidAlvo, colecao, treino.id);
