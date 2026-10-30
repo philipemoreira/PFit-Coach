@@ -146,6 +146,16 @@ service cloud.firestore {
         allow delete: if ehDono(userId);
       }
 
+      // Anotações privadas do personal sobre cada aluno (e alunos arquivados) e modelos de dieta: só dele.
+      match /notasAlunos/{id} {
+        allow read, delete: if ehDono(userId);
+        allow create, update: if ehDono(userId) && temAcesso(userId);
+      }
+      match /modelosDieta/{id} {
+        allow read, delete: if ehDono(userId);
+        allow create, update: if ehDono(userId) && temAcesso(userId);
+      }
+
       // Modelos de treino do personal: só dele.
       match /modelos/{id} {
         allow read, delete: if ehDono(userId);

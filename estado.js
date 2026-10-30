@@ -24,6 +24,8 @@ export const estado = {
   alimentos: [],      // meus alimentos (biblioteca)
   refeicoes: [],      // o que comi, por dia
   dietaArquivos: [],  // arquivos de dieta (PDF/Word) enviados pelo personal
+  notasAlunos: [],    // (personal) anotações privadas e alunos arquivados
+  modelosDieta: [],   // (personal) modelos de dieta
   assinatura: undefined,         // minha assinatura (undefined = carregando | null = não existe)
   assinaturaPersonal: undefined  // assinatura do meu personal (se eu tiver um)
 };
@@ -77,6 +79,8 @@ export function iniciarDados(uid, email, aoMudar) {
   ouvir('alimentos', 'alimentos', [orderBy('nome', 'asc')]);
   ouvir('refeicoes', 'refeicoes', [orderBy('data', 'desc'), limit(60)]);
   ouvir('dietaArquivos', 'dietaArquivos', [orderBy('criadoEm', 'desc'), limit(20)]);
+  ouvir('notasAlunos', 'notasAlunos', [limit(500)]);
+  ouvir('modelosDieta', 'modelosDieta', [orderBy('ordem', 'asc')]);
 
   // Meu vínculo com um personal (o documento tem o meu próprio código de usuário como nome).
   paradores.push(onSnapshot(doc(db, 'vinculos', uid), (snap) => {
@@ -152,6 +156,8 @@ export function pararDados() {
   estado.alimentos = [];
   estado.refeicoes = [];
   estado.dietaArquivos = [];
+  estado.notasAlunos = [];
+  estado.modelosDieta = [];
   estado.assinatura = undefined;
   estado.assinaturaPersonal = undefined;
 }

@@ -1433,3 +1433,12 @@ a.btn.cheio{width:100%}
 .conta-troca-txt small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conta-troca.atual{cursor:default}
 .aviso-add-conta{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:var(--card2);border-bottom:1px solid var(--borda);font-size:14px}
+
+/* v50 personal: filtros, notas, evolução */
+.filtro-alunos{display:grid;gap:8px;margin-bottom:10px}
+.chips-filtro{display:flex;gap:6px;flex-wrap:wrap}
+.chip-f{border:1px solid var(--borda);background:var(--card);color:var(--mudo);font:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:99px;cursor:pointer}
+.chip-f[aria-pressed="true"]{background:var(--limao);color:var(--sobre-limao);border-color:var(--limao)}
+textarea.in{resize:vertical;min-height:110px}
+.personal-contato{display:grid;gap:8px;margin-top:10px}
+.selo.arq{background:var(--card2);color:var(--mudo)}

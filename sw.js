@@ -1,13 +1,13 @@
 // Guarda os arquivos do app no aparelho para ele abrir rápido e funcionar sem internet.
 // Toda vez que eu mudar o app, o número da versão sobe (NOME_DO_CACHE).
-const NOME_DO_CACHE = 'treino-v49';
+const NOME_DO_CACHE = 'treino-v50';
 
 const ARQUIVOS_ESSENCIAIS = [
   './', './index.html', './style.css', './manifest.json',
   './app.js', './firebase.js', './firebase-config.js', './util.js', './folha.js', './nav.js',
   './dados.js', './estado.js', './tema.js', './metricas.js',
   './exercicios-base.js', './conquistas-personal.js',
-  './alimentos.js', './dietaarquivo.js', './contas.js',
+  './alimentos.js', './dietaarquivo.js', './evolucao.js', './contas.js',
   './fotos.js',
   './conta.js', './assinatura.js', './ajuda.js', './onboarding.js', './vinculo.js', './dicas.js', './video.js', './dietaplano.js', './recolhivel.js', './estatisticas.js', './historico.js', './anilhas.js', './personal.js', './recados.js', './auth.js', './hoje.js', './treinos.js', './treinar.js',
   './dieta.js', './progresso.js', './perfil.js',

@@ -5,7 +5,8 @@ import {
 import { estado } from './estado.js';
 import { abrirFolha, confirmar, fecharTodasFolhas } from './folha.js';
 import { escaparHtml, dataLocal, parseData, formatarDataCurta, formatarNumero, numero, novoId, toast, segundaDaSemana, DIAS_CURTOS, ORDEM_DIAS } from './util.js';
-import { salvarDoc, salvarGlobal, removerGlobal, salvarPerfil } from './dados.js';
+import { salvarDoc, removerDoc, salvarGlobal, removerGlobal, salvarPerfil } from './dados.js';
+import { cartoesEvolucao } from './evolucao.js';
 import { abrirEditorTreino } from './treinos.js';
 import { abrirEditorItem } from './dieta.js';
 import { MOMENTOS, ordenarPlano, analisarDia, textoPassou, cumprimento as cumprimentoPlano, descreverQtd } from './dietaplano.js';
@@ -25,6 +26,14 @@ const DIAS_SUMIDO = 7;
 
 let alunoAberto = null;
 let abaAluno = 'treinos'; // treinos | dieta | corpo | perfil
+let filtroAlunos = 'todos'; // todos | sumidos | passaram
+let buscaAlunos = '';
+let mostrarArquivados = false;
+let exEvol = ''; // exercício mostrado no gráfico de carga
+let rascunhoNota = null; // { uid, texto }: o que está sendo digitado na anotação, para não perder ao atualizar a tela
+const notaDe = (uid) => estado.notasAlunos.find((n) => n.id === uid) || null;
+const arquivado = (uid) => !!(notaDe(uid) && notaDe(uid).arquivado);
+const semAcento = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 let dados = vazio();
 let paradoresAluno = [];
 const resumo = {}; // uid -> sessoes recentes (para a lista)
@@ -81,6 +90,7 @@ function abrirDetalhe(uid) {
   fecharDetalhe();
   alunoAberto = uid;
   abaAluno = 'treinos';
+  rascunhoNota = null;
   dados = vazio();
   const ouvir = (sub, campo, restr) => {
     paradoresAluno.push(onSnapshot(query(collection(db, 'usuarios', uid, sub), ...restr), (snap) => {
@@ -209,15 +219,42 @@ function cartaoModelos() {
     <div class="card-topo"><h2>Modelos de treino</h2><button class="btn pequeno" type="button" data-acao="p-modelo-novo">+ Novo</button></div>
     <p class="mudo peq">Treinos prontos que você aplica em qualquer aluno com um toque.</p>
     ${lista.length ? listaRecolhivel('modelos', lista.map((m) => `<button type="button" class="regra-linha" data-acao="p-modelo-editar" data-id="${escaparHtml(m.id)}"><span>${escaparHtml(m.nome)}<br><small class="mudo">${(m.exercicios || []).length} exercício${(m.exercicios || []).length === 1 ? '' : 's'}</small></span><span class="seta" aria-hidden="true">›</span></button>`)) : '<p class="mudo vazio-peq">Nenhum modelo ainda.</p>'}
+  </section>
+  <section class="card">
+    <h2>Modelos de dieta</h2>
+    <p class="mudo peq">Para criar: abra um aluno, aba Dieta, e toque em "Salvar esta dieta como modelo".</p>
+    ${estado.modelosDieta.length ? estado.modelosDieta.map((m) => `<div class="arq-lin"><span class="arq-txt"><b>${escaparHtml(m.nome)}</b><small class="mudo">${(m.itens || []).length} ${(m.itens || []).length === 1 ? 'item' : 'itens'}</small></span><span class="arq-acoes"><button class="btn pequeno perigo-claro" type="button" data-acao="p-mdieta-apagar" data-id="${escaparHtml(m.id)}" aria-label="Apagar ${escaparHtml(m.nome)}">✕</button></span></div>`).join('') : '<p class="mudo vazio-peq">Nenhum modelo de dieta ainda.</p>'}
   </section>`;
+}
+
+function alunosFiltrados() {
+  const q = semAcento(buscaAlunos.trim());
+  return estado.alunos.filter((v) => !arquivado(v.id)).filter((v) => {
+    if (q && !semAcento(`${v.alunoNome || ''} ${v.alunoEmail || ''}`).includes(q)) return false;
+    if (filtroAlunos === 'sumidos') { const s = situacao(v); return !s.carregando && s.sumido; }
+    if (filtroAlunos === 'passaram') return !!passouHoje(v.id);
+    return true;
+  });
+}
+
+function linhasAlunos() {
+  const l = alunosFiltrados();
+  if (!l.length) {
+    const ativos = estado.alunos.filter((v) => !arquivado(v.id)).length;
+    return `<section class="card"><p class="mudo vazio-grafico">${ativos ? 'Nenhum aluno encontrado com esse filtro.' : (estado.alunos.length ? 'Todos os seus alunos estão arquivados.' : 'Nenhum aluno conectado ainda.<br>Passe o código para o primeiro.')}</p></section>`;
+  }
+  return `<div class="linhas alunos-lista">${l.map(cartaoAluno).join('')}</div>`;
 }
 
 function listaAlunos() {
   sincronizarLista();
-  const sumidos = estado.alunos.filter((v) => { const s = situacao(v); return !s.carregando && s.sumido; });
-  const passaram = estado.alunos.filter((v) => passouHoje(v.id));
+  const ativos = estado.alunos.filter((v) => !arquivado(v.id));
+  const arqs = estado.alunos.filter((v) => arquivado(v.id));
+  const sumidos = ativos.filter((v) => { const s = situacao(v); return !s.carregando && s.sumido; });
+  const passaram = ativos.filter((v) => passouHoje(v.id));
   const cq = ordenar(conquistasPersonal(resumo));
   const prox = cq.find((c) => !c.ok);
+  const chip = (k, r) => `<button type="button" class="chip-f" data-acao="p-filtro" data-f="${k}" aria-pressed="${filtroAlunos === k}">${r}</button>`;
   return `
   <header class="topo"><h1>Alunos</h1></header>
   ${avisoFaixa()}
@@ -225,18 +262,32 @@ function listaAlunos() {
   ${cartaoConvite()}
   ${sumidos.length ? `<p class="alerta-atraso" role="status">⚠️ ${sumidos.length} ${sumidos.length === 1 ? 'aluno está' : 'alunos estão'} há ${DIAS_SUMIDO} dias ou mais sem treinar: ${escaparHtml(sumidos.map((v) => v.alunoNome || 'Aluno').join(', '))}.</p>` : ''}
   <section class="secao">
-    <div class="secao-cab"><h2>Seus alunos${estado.alunos.length ? ` <span class="selo">${estado.alunos.length}</span>` : ''}</h2></div>
-    ${estado.alunos.length
-    ? `<div class="linhas alunos-lista">${estado.alunos.map(cartaoAluno).join('')}</div>`
-    : '<section class="card"><p class="mudo vazio-grafico">Nenhum aluno conectado ainda.<br>Passe o código para o primeiro.</p></section>'}
+    <div class="secao-cab"><h2>Seus alunos${ativos.length ? ` <span class="selo">${ativos.length}</span>` : ''}</h2></div>
+    ${ativos.length >= 4 ? `<div class="filtro-alunos">
+      <input class="in" type="search" data-f="busca-alunos" placeholder="Buscar aluno pelo nome…" autocomplete="off" value="${escaparHtml(buscaAlunos)}">
+      <div class="chips-filtro">${chip('todos', 'Todos')}${chip('sumidos', 'Sumidos')}${chip('passaram', 'Passaram da dieta')}</div></div>` : ''}
+    <div id="alunos-lista">${linhasAlunos()}</div>
   </section>
   <section class="secao">
     <div class="linhas">
-      ${atalho('p-modelos-abrir', 'Modelos de treino', estado.modelos.length ? `${estado.modelos.length} ${estado.modelos.length === 1 ? 'modelo' : 'modelos'} · aplique em qualquer aluno` : 'Treinos prontos para aplicar em qualquer aluno')}
+      ${atalho('p-modelos-abrir', 'Modelos', `${estado.modelos.length} de treino · ${estado.modelosDieta.length} de dieta`)}
       ${atalho('pc-todas', 'Conquistas', `${cq.filter((c) => c.ok).length} de ${cq.length}${prox ? ` · próxima: ${prox.nome}` : ''}`)}
+      ${arqs.length ? atalho('p-arquivados-toggle', 'Alunos arquivados', `${arqs.length} ${arqs.length === 1 ? 'aluno' : 'alunos'} · ${mostrarArquivados ? 'toque para esconder' : 'toque para ver'}`) : ''}
     </div>
+    ${arqs.length && mostrarArquivados ? `<div class="linhas alunos-lista" style="margin-top:10px">${arqs.map(cartaoAluno).join('')}</div>` : ''}
   </section>`;
 }
+
+// Busca de alunos: atualiza só a lista (sem refazer a tela, para não perder o cursor).
+document.addEventListener('input', (e) => {
+  if (!e.target.matches || !e.target.matches('[data-f="busca-alunos"]')) return;
+  buscaAlunos = e.target.value;
+  const c = document.getElementById('alunos-lista');
+  if (c) c.innerHTML = linhasAlunos();
+});
+document.addEventListener('input', (e) => {
+  if (e.target.matches && e.target.matches('[data-f="nota-aluno"]') && alunoAberto) rascunhoNota = { uid: alunoAberto, texto: e.target.value };
+});
 
 const atalho = (acao, titulo, sub) => `
       <button type="button" class="linha-menu" data-acao="${acao}"><span class="linha-txt"><b>${titulo}</b><small>${escaparHtml(sub)}</small></span><svg class="linha-seta" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`;
@@ -286,7 +337,7 @@ function detalhe(v) {
   <section class="card perfil-topo">
     <div class="avatar" aria-hidden="true">${escaparHtml(nome.trim().charAt(0).toUpperCase())}</div>
     <div><h2>${escaparHtml(nome)}</h2><p class="mudo peq">${escaparHtml(v.alunoEmail || '')}</p>
-    <span class="selo">${ult ? `Último treino: ${formatarDataCurta(ult.data)}` : 'Ainda não treinou'}</span></div>
+    <span class="selo">${ult ? `Último treino: ${formatarDataCurta(ult.data)}` : 'Ainda não treinou'}</span>${arquivado(v.id) ? ' <span class="selo arq">Arquivado</span>' : ''}</div>
   </section>
   <section class="resumo">
     <div class="num-card"><strong>${semana}</strong><span>treinos na semana</span></div>
@@ -316,6 +367,14 @@ function detalhe(v) {
   ${abaAluno === 'dieta' ? `<div class="grade-cards">
     ${cartaoArquivosPersonal(dados.dietaArquivos)}
     <section class="card">
+      <h2>Modelos de dieta</h2>
+      <p class="mudo peq">Reaproveite uma dieta em outros alunos.</p>
+      <div class="acoes-card">
+        ${planoAluno.length ? '<button class="btn secundario cheio" type="button" data-acao="p-mdieta-salvar">Salvar esta dieta como modelo</button>' : ''}
+        <button class="btn secundario cheio" type="button" data-acao="p-mdieta-usar">Usar um modelo de dieta</button>
+      </div>
+    </section>
+    <section class="card">
       <div class="card-topo"><h2>Dieta dele</h2><button class="btn pequeno" type="button" data-acao="p-dieta-item-novo">+ Item</button></div>
       <p class="mudo peq">Lista fixa, igual todos os dias. Ele só marca o que comeu.</p>
       ${planoAluno.length ? MOMENTOS.map((m) => [m, planoAluno.filter((p) => p.momento === m)]).filter(([, l]) => l.length).map(([m, l]) => `<div class="grupo-regras"><div class="card-topo"><h3>${m}</h3><button class="link" type="button" data-acao="p-dieta-item-novo" data-momento="${m}">+ item</button></div>
@@ -328,6 +387,7 @@ function detalhe(v) {
     </section>
   </div>` : ''}
   ${abaAluno === 'corpo' ? `<div class="grade-cards">
+    ${cartoesEvolucao(dados, exEvol)}
     <section class="card">
       <h2>Metas dele</h2>
       <p class="mudo peq">Volume por dia: <strong>${typeof m.metaVolume === 'number' ? formatarVolume(m.metaVolume) : 'sem meta'}</strong><br>
@@ -350,6 +410,17 @@ function detalhe(v) {
       <h2>Sobre o aluno</h2>
       ${(() => { const l = resumoAnamnese(dados.perfilAluno && dados.perfilAluno.anamnese); return l.length ? `<div class="lista-metas">${l.map(([k, v]) => `<div><span>${escaparHtml(k)}</span><strong>${escaparHtml(v)}</strong></div>`).join('')}</div>` : '<p class="mudo peq">Ele ainda não respondeu o questionário inicial.</p>'; })()}
     </section>
+    <section class="card">
+      <h2>Minhas anotações</h2>
+      <p class="mudo peq">Só você vê. Lesão, objetivo, combinados…</p>
+      <textarea class="in" data-f="nota-aluno" rows="5" maxlength="2000" placeholder="Escreva aqui">${escaparHtml(rascunhoNota && rascunhoNota.uid === v.id ? rascunhoNota.texto : ((notaDe(v.id) && notaDe(v.id).texto) || ''))}</textarea>
+      <div class="acoes-card"><button class="btn cheio" type="button" data-acao="p-nota-salvar">Salvar anotação</button></div>
+    </section>
+    <section class="card">
+      <h2>Organização</h2>
+      <p class="mudo peq">${arquivado(v.id) ? 'Este aluno está arquivado: não aparece na lista principal.' : 'Arquivar tira o aluno da lista principal sem apagar nada. Ele continua conectado e o histórico fica guardado.'}</p>
+      <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="p-aluno-arquivar">${arquivado(v.id) ? 'Tirar dos arquivados' : 'Arquivar aluno'}</button></div>
+    </section>
   </div>
   <button class="btn perigo-claro cheio" type="button" data-acao="p-aluno-remover">Remover este aluno</button>` : ''}`;
 }
@@ -365,11 +436,14 @@ export const personal = {
     }
     return listaAlunos();
   },
+  mudancas: {
+    'p-ex-grafico': (el) => { exEvol = el.value; nav.renderizar(); }
+  },
   acoes: {
     'p-convite-gerar': async () => {
       const codigo = gerarCodigo();
       try {
-        await salvarGlobal('convites', codigo, { personalUid: estado.uid, personalNome: (estado.perfil && estado.perfil.nome) || '', criadoEm: new Date().toISOString() });
+        await salvarGlobal('convites', codigo, { personalUid: estado.uid, personalNome: (estado.perfil && estado.perfil.nome) || '', whatsapp: (estado.perfil && estado.perfil.whatsapp) || '', cref: (estado.perfil && estado.perfil.cref) || '', criadoEm: new Date().toISOString() });
         await salvarPerfil(estado.uid, { codigoConvite: codigo }, { merge: true });
         toast('Código criado.');
       } catch (e) { console.error(e); toast('Não consegui criar o código. Confira a internet e as regras do Firebase.'); }
@@ -384,7 +458,7 @@ export const personal = {
       const antigo = estado.perfil && estado.perfil.codigoConvite;
       const codigo = gerarCodigo();
       try {
-        await salvarGlobal('convites', codigo, { personalUid: estado.uid, personalNome: (estado.perfil && estado.perfil.nome) || '', criadoEm: new Date().toISOString() });
+        await salvarGlobal('convites', codigo, { personalUid: estado.uid, personalNome: (estado.perfil && estado.perfil.nome) || '', whatsapp: (estado.perfil && estado.perfil.whatsapp) || '', cref: (estado.perfil && estado.perfil.cref) || '', criadoEm: new Date().toISOString() });
         await salvarPerfil(estado.uid, { codigoConvite: codigo }, { merge: true });
         if (antigo) await removerGlobal('convites', antigo);
         toast('Código novo criado.');
@@ -504,6 +578,72 @@ export const personal = {
         nav.renderizar();
         toast('Aluno removido.');
       } catch (e) { console.error(e); toast('Não consegui remover. Tente de novo.'); }
+    },
+    'p-filtro': (el) => { filtroAlunos = el.dataset.f; nav.renderizar(); },
+    'p-arquivados-toggle': () => { mostrarArquivados = !mostrarArquivados; nav.renderizar(); },
+    'p-nota-salvar': async () => {
+      if (!alunoAberto) return;
+      const caixa = document.querySelector('[data-f="nota-aluno"]');
+      const texto = caixa ? caixa.value.trim() : '';
+      await salvarDoc(estado.uid, 'notasAlunos', alunoAberto, { texto, arquivado: arquivado(alunoAberto), atualizadoEm: new Date().toISOString() });
+      rascunhoNota = null;
+      toast('Anotação salva.');
+    },
+    'p-aluno-arquivar': async () => {
+      if (!alunoAberto) return;
+      const novo = !arquivado(alunoAberto);
+      if (novo && !(await confirmar('Arquivar este aluno? Ele sai da lista principal, mas continua conectado e nada é apagado. Você pode desarquivar quando quiser.', { ok: 'Arquivar' }))) return;
+      const n = notaDe(alunoAberto);
+      await salvarDoc(estado.uid, 'notasAlunos', alunoAberto, { texto: (n && n.texto) || '', arquivado: novo, atualizadoEm: new Date().toISOString() });
+      toast(novo ? 'Aluno arquivado.' : 'Aluno de volta na lista.');
+      if (novo) { fecharDetalhe(); mostrarArquivados = true; nav.renderizar(); window.scrollTo(0, 0); }
+    },
+    'p-mdieta-salvar': () => {
+      if (!alunoAberto) return;
+      const plano = ordenarPlano(dados.dietaItens);
+      if (!plano.length) { toast('Esta dieta ainda não tem itens.'); return; }
+      const v = atual();
+      const f = abrirFolha(`<h2>Salvar como modelo</h2>
+        <p class="mudo peq">A dieta atual (${plano.length} ${plano.length === 1 ? 'item' : 'itens'}) vira um modelo para usar em outros alunos.</p>
+        <label class="campo">Nome do modelo<input class="in" data-f="nome-modelo" maxlength="60" placeholder="Ex.: Emagrecimento 1800 kcal" value="${escaparHtml(`Dieta de ${(v && v.alunoNome) || 'aluno'}`)}"></label>
+        <p class="erro" data-erro role="alert"></p>
+        <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Cancelar</button><button class="btn" type="button" data-ed="salvar">Salvar</button></div>`);
+      f.el.addEventListener('click', async (e) => {
+        if (!e.target.closest('[data-ed="salvar"]')) return;
+        const nome = f.el.querySelector('[data-f="nome-modelo"]').value.trim();
+        if (!nome) { f.el.querySelector('[data-erro]').textContent = 'Dê um nome para o modelo.'; return; }
+        const itens = plano.map((p) => ({ momento: p.momento, nome: p.nome, qtd: p.qtd, unidade: p.unidade || '', kcal: p.kcal || 0, prot: p.prot || 0, carb: p.carb || 0, gord: p.gord || 0 }));
+        await salvarDoc(estado.uid, 'modelosDieta', novoId(), { nome, itens, ordem: Date.now(), criadoEm: new Date().toISOString() });
+        f.fechar();
+        toast('Modelo de dieta salvo.');
+      });
+    },
+    'p-mdieta-usar': () => {
+      if (!alunoAberto) return;
+      if (!estado.modelosDieta.length) { toast('Você ainda não tem modelos de dieta. Salve a dieta de um aluno como modelo.'); return; }
+      const f = abrirFolha(`<h2>Qual modelo de dieta?</h2>
+        <div class="lista">${estado.modelosDieta.map((m) => `<button type="button" class="regra-linha" data-m="${escaparHtml(m.id)}"><span>${escaparHtml(m.nome)}<br><small class="mudo">${(m.itens || []).length} itens</small></span><span class="seta" aria-hidden="true">›</span></button>`).join('')}</div>
+        <button class="btn secundario cheio" type="button" data-fechar>Cancelar</button>`);
+      f.el.addEventListener('click', async (e) => {
+        const b = e.target.closest('[data-m]');
+        if (!b || !alunoAberto) return;
+        const m = estado.modelosDieta.find((x) => x.id === b.dataset.m);
+        if (!m) return;
+        const v = atual();
+        if (!(await confirmar(`Adicionar os ${(m.itens || []).length} itens de "${m.nome}" à dieta de ${(v && v.alunoNome) || 'aluno'}? Os itens que ele já tem continuam.`, { ok: 'Adicionar' }))) return;
+        const base = Date.now();
+        let i = 0;
+        for (const it of (m.itens || [])) await salvarDoc(alunoAberto, 'dietaItens', novoId(), { ...it, ordem: base + i++, criadoEm: new Date().toISOString() });
+        f.fechar();
+        toast('Dieta aplicada ao aluno.');
+      });
+    },
+    'p-mdieta-apagar': async (el) => {
+      const m = estado.modelosDieta.find((x) => x.id === el.dataset.id);
+      if (!m) return;
+      if (!(await confirmar(`Apagar o modelo "${m.nome}"? As dietas dos alunos não mudam.`, { ok: 'Apagar', perigo: true }))) return;
+      await removerDoc(estado.uid, 'modelosDieta', m.id);
+      toast('Modelo apagado.');
     },
     'p-arq-enviar': () => { if (alunoAberto) escolherEEnviar(alunoAberto); },
     'p-arq-ver': (el) => { const m = dados.dietaArquivos.find((x) => x.id === el.dataset.id); if (m && alunoAberto) abrirArquivoDieta(alunoAberto, m); },

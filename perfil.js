@@ -1,5 +1,5 @@
 // Aba Perfil: dados da conta, backup e sair.
-import { auth, signOut, db, doc, getDoc } from './firebase.js';
+import { auth, signOut, db, doc, getDoc, setDoc } from './firebase.js';
 import { estado } from './estado.js';
 import { abrirFolha, confirmar, fecharTodasFolhas } from './folha.js';
 import { abrirContas, aposSair, lerContas } from './contas.js';
@@ -97,6 +97,10 @@ function cartaoPersonal() {
   </section>`;
 }
 
+const soDigitos = (t) => String(t || '').replace(/\D/g, '');
+const formatarWhats = (d) => { const n = soDigitos(d).replace(/^55(?=\d{10,11}$)/, ''); return n.length === 11 ? `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}` : n.length === 10 ? `(${n.slice(0, 2)}) ${n.slice(2, 6)}-${n.slice(6)}` : n; };
+const linkWhats = (d) => { const n = soDigitos(d); return `https://wa.me/${n.length <= 11 ? '55' + n : n}`; };
+
 // Conta de personal: só os dados pessoais dele (nome, e-mail, idade). Nada de treino ou dieta próprios.
 function cartaoDadosPersonal(p) {
   const idade = idadeDe(p.nascimento);
@@ -106,9 +110,11 @@ function cartaoDadosPersonal(p) {
     <div class="lista-metas">
       <div><span>Nome</span><strong>${escaparHtml(p.nome || '')}</strong></div>
       <div><span>E-mail</span><strong>${escaparHtml(estado.email || '')}</strong></div>
+      <div><span>WhatsApp</span><strong>${p.whatsapp ? escaparHtml(formatarWhats(p.whatsapp)) : 'não informado'}</strong></div>
+      <div><span>CREF</span><strong>${p.cref ? escaparHtml(p.cref) : 'não informado'}</strong></div>
       <div><span>Data de nascimento</span><strong>${p.nascimento ? `${escaparHtml(formatarDataCurta(p.nascimento))}${idade !== null ? ` · ${idade} anos` : ''}` : 'não informada'}</strong></div>
     </div>
-    <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="personal-dados">${p.nascimento ? 'Editar data de nascimento' : 'Informar data de nascimento'}</button></div>
+    <div class="acoes-card"><button class="btn secundario cheio" type="button" data-acao="personal-contato">Editar WhatsApp e CREF</button><button class="btn secundario cheio" type="button" data-acao="personal-dados">${p.nascimento ? 'Editar data de nascimento' : 'Informar data de nascimento'}</button></div>
   </section>`;
 }
 
@@ -263,13 +269,46 @@ export const contaTela = {
   acoes: {
     'contas-abrir': () => abrirContas(),
     'planos-abrir': () => abrirFolha(folhaPlanos()),
-    'personal-abrir': () => abrirFolha(`${cartaoPersonal()}<button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`),
+    'personal-abrir': async () => {
+      const f = abrirFolha(`${cartaoPersonal()}<div class="personal-contato" data-contato></div><button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`);
+      const v = estado.vinculo;
+      if (!v || !v.codigo) return;
+      try {
+        const snap = await getDoc(doc(db, 'convites', v.codigo));
+        const d = snap.exists() ? snap.data() : null;
+        const alvo = f.el.querySelector('[data-contato]');
+        if (!d || !alvo || (!d.whatsapp && !d.cref)) return;
+        alvo.innerHTML = `${d.cref ? `<p class="mudo peq">CREF: <strong>${escaparHtml(d.cref)}</strong></p>` : ''}${d.whatsapp ? `<a class="btn cheio" href="${escaparHtml(linkWhats(d.whatsapp))}" target="_blank" rel="noopener">Falar no WhatsApp</a>` : ''}`;
+      } catch (e) { console.error(e); }
+    },
     'saude-abrir': () => abrirFolha(`${cartaoSaude(estado.perfil || {})}<button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`, { classe: 'folha-alta' }),
     privacidade: () => abrirPrivacidade(),
     termos: () => abrirTermos(),
     'onboarding-refazer': () => { fecharTodasFolhas(); abrirOnboarding({ refazer: true }); },
     ajuda: () => abrirAjuda(),
     'conta-excluir': () => abrirExclusao(),
+    'personal-contato': () => {
+      const p = estado.perfil || {};
+      const f = abrirFolha(`
+        <h2>Contato profissional</h2>
+        <p class="mudo peq">Aparece para os seus alunos, em "Meu personal". Os dois campos são opcionais.</p>
+        <label class="campo">WhatsApp (com DDD)<input class="in" data-f="whats" inputmode="tel" autocomplete="off" placeholder="(44) 99999-9999" value="${escaparHtml(p.whatsapp ? formatarWhats(p.whatsapp) : '')}"></label>
+        <label class="campo">CREF<input class="in" data-f="cref" maxlength="30" autocomplete="off" placeholder="Ex.: 012345-G/PR" value="${escaparHtml(p.cref || '')}"></label>
+        <p class="erro" data-erro role="alert"></p>
+        <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Cancelar</button><button class="btn" type="button" data-ed="salvar">Salvar</button></div>`);
+      f.el.addEventListener('click', async (e) => {
+        if (!e.target.closest('[data-ed="salvar"]')) return;
+        const whats = soDigitos(f.el.querySelector('[data-f="whats"]').value);
+        const cref = f.el.querySelector('[data-f="cref"]').value.trim();
+        if (whats && (whats.length < 10 || whats.length > 13)) { f.el.querySelector('[data-erro]').textContent = 'Confira o WhatsApp: DDD + número (10 ou 11 dígitos).'; return; }
+        await salvarPerfil(estado.uid, { whatsapp: whats, cref }, { merge: true });
+        // O convite carrega o contato, para o aluno ver mesmo depois de conectado.
+        const cod = (estado.perfil || {}).codigoConvite;
+        if (cod) { try { await setDoc(doc(db, 'convites', cod), { whatsapp: whats, cref }, { merge: true }); } catch (err) { console.error(err); } }
+        f.fechar();
+        toast('Contato salvo.');
+      });
+    },
     'personal-dados': () => {
       const atual = (estado.perfil || {}).nascimento || '';
       const f = abrirFolha(`
