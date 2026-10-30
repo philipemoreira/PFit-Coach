@@ -75,14 +75,18 @@ function blocoExercicio(ex = {}) {
 }
 
 // Janela para escolher o exercício: grupos que abrem um de cada vez (acordeão) + busca.
-function abrirEscolha(aoEscolher, textoAtual = '', aoCancelar = null) {
+// multi = true: dá para marcar vários exercícios e adicionar todos de uma vez (aoEscolher recebe uma lista de nomes).
+function abrirEscolha(aoEscolher, textoAtual = '', aoCancelar = null, multi = false) {
   let escolheu = false;
+  const marcados = []; // nomes marcados, na ordem em que foram tocados (só no modo multi)
   const meus = nomesJaUsados().filter((n) => !todosOsNomes().includes(n)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   const grupos = Object.entries(BASE).map(([g, lista]) => [g, lista]);
   if (meus.length) grupos.push(['Meus exercícios', meus]);
-  const item = (n) => `<button type="button" class="lib-item" data-nome="${escaparHtml(n)}">${escaparHtml(n)}</button>`;
+  const marca = '<span class="lib-chk" aria-hidden="true"></span>';
+  const item = (n) => `<button type="button" class="lib-item" data-nome="${escaparHtml(n)}" ${multi ? 'aria-pressed="false"' : ''}>${escaparHtml(n)}${multi ? marca : ''}</button>`;
   const f = abrirFolha(`
-    <h2>Escolher exercício</h2>
+    <h2>${multi ? 'Escolher exercícios' : 'Escolher exercício'}</h2>
+    ${multi ? '<p class="mudo peq lib-dica-multi">Toque em quantos quiser. Depois toque em <b>Adicionar</b>.</p>' : ''}
     <input class="in lib-busca" type="search" data-busca placeholder="Buscar pelo nome…" autocomplete="off" value="">
     <div class="lib-grupos" data-grupos>
       ${grupos.map(([g, lista]) => `
@@ -93,7 +97,7 @@ function abrirEscolha(aoEscolher, textoAtual = '', aoCancelar = null) {
     </div>
     <div class="lib-res" data-res hidden></div>
     <p class="mudo peq lib-dica">Não achou o seu? Busque e toque em <b>Usar</b>, ou feche e digite o nome.</p>
-    <div class="linha-botoes"><button class="btn secundario" type="button" data-fechar>Fechar</button></div>`, { classe: 'folha-alta folha-lib', aoFechar: () => { if (!escolheu && aoCancelar) aoCancelar(); } });
+    <div class="linha-botoes ${multi ? 'lib-rodape' : ''}"><button class="btn secundario" type="button" data-fechar>${multi ? 'Cancelar' : 'Fechar'}</button>${multi ? '<button class="btn" type="button" data-lib-ok disabled>Adicionar</button>' : ''}</div>`, { classe: 'folha-alta folha-lib', aoFechar: () => { if (!escolheu && aoCancelar) aoCancelar(); } });
   const el = f.el;
   const busca = el.querySelector('[data-busca]');
   const gruposEl = el.querySelector('[data-grupos]');
@@ -106,9 +110,18 @@ function abrirEscolha(aoEscolher, textoAtual = '', aoCancelar = null) {
     res.hidden = !q;
     if (!q) return;
     const achou = todos.filter((x) => norm(x.n).includes(q));
-    res.innerHTML = (achou.length ? achou.map((x) => `<button type="button" class="lib-item" data-nome="${escaparHtml(x.n)}">${escaparHtml(x.n)}<small>${escaparHtml(x.g)}</small></button>`).join('') : '<p class="mudo peq">Nenhum exercício com esse nome.</p>')
-      + `<button type="button" class="lib-item lib-usar" data-nome="${escaparHtml(busca.value.trim())}">Usar “${escaparHtml(busca.value.trim())}”</button>`;
+    const pm = multi ? ' aria-pressed="false"' : '';
+    res.innerHTML = (achou.length ? achou.map((x) => `<button type="button" class="lib-item" data-nome="${escaparHtml(x.n)}"${pm}><span>${escaparHtml(x.n)}<small>${escaparHtml(x.g)}</small></span>${multi ? marca : ''}</button>`).join('') : '<p class="mudo peq">Nenhum exercício com esse nome.</p>')
+      + `<button type="button" class="lib-item lib-usar" data-nome="${escaparHtml(busca.value.trim())}"${pm}>Usar “${escaparHtml(busca.value.trim())}”${multi ? marca : ''}</button>`;
+    pintar();
   });
+  const ok = el.querySelector('[data-lib-ok]');
+  // Deixa marcados (✓) todos os itens cujo nome está na lista, nos grupos e nos resultados da busca.
+  function pintar() {
+    if (!multi) return;
+    el.querySelectorAll('.lib-item').forEach((b) => b.setAttribute('aria-pressed', marcados.includes(b.dataset.nome) ? 'true' : 'false'));
+    if (ok) { ok.disabled = !marcados.length; ok.textContent = marcados.length ? `Adicionar (${marcados.length})` : 'Adicionar'; }
+  }
   el.addEventListener('click', (e) => {
     const cab = e.target.closest('[data-grupo]');
     if (cab) {
@@ -121,8 +134,20 @@ function abrirEscolha(aoEscolher, textoAtual = '', aoCancelar = null) {
       }
       return;
     }
+    if (multi && e.target.closest('[data-lib-ok]')) {
+      if (!marcados.length) return;
+      escolheu = true; aoEscolher([...marcados]); f.fechar(); return;
+    }
     const it = e.target.closest('.lib-item');
-    if (it && it.dataset.nome) { escolheu = true; aoEscolher(it.dataset.nome); f.fechar(); }
+    if (it && it.dataset.nome) {
+      if (multi) {
+        const i = marcados.indexOf(it.dataset.nome);
+        if (i >= 0) marcados.splice(i, 1); else marcados.push(it.dataset.nome);
+        pintar();
+        return;
+      }
+      escolheu = true; aoEscolher(it.dataset.nome); f.fechar();
+    }
   });
   if (textoAtual) { busca.value = textoAtual; busca.dispatchEvent(new Event('input')); }
   return f;
@@ -176,11 +201,11 @@ export function abrirEditorTreino(treino, opcoes = {}) {
       <p class="mudo peq">O treino marcado para o dia aparece na aba Hoje.</p>
     </section>
     <div class="ed-cab"><h3>Exercícios</h3><span class="mudo peq" data-cont></span></div>
-    <p class="mudo peq ed-dica">Toque em <b>☰</b> para escolher da lista. Segure o <b>⠿</b> e arraste para mudar a ordem.</p>
+    <p class="mudo peq ed-dica">Use <b>+ Adicionar exercícios</b> para marcar vários de uma vez, ou <b>☰</b> para trocar um só. Segure o <b>⠿</b> e arraste para mudar a ordem.</p>
     <div id="ex-lista">${exs.map(blocoExercicio).join('')}</div>
-    <p class="mudo ed-vazio" data-vazio hidden>Nenhum exercício ainda. Toque em <b>+ Adicionar exercício</b> para escolher o primeiro da lista.</p>
+    <p class="mudo ed-vazio" data-vazio hidden>Nenhum exercício ainda. Toque em <b>+ Adicionar exercícios</b> e marque vários de uma vez.</p>
     <div class="ed-add-linha">
-      <button class="btn secundario" type="button" data-ed="add">+ Adicionar exercício</button>
+      <button class="btn secundario" type="button" data-ed="add">+ Adicionar exercícios</button>
       <button class="btn secundario" type="button" data-ed="continuar">Salvar e continuar</button>
     </div>
     <p class="erro" data-erro role="alert"></p>
@@ -268,13 +293,21 @@ export function abrirEditorTreino(treino, opcoes = {}) {
     const b = e.target.closest('[data-ed]');
     if (!b) return;
     if (b.dataset.ed === 'add') {
-      el.querySelector('#ex-lista').insertAdjacentHTML('beforeend', blocoExercicio());
-      const blocos = el.querySelectorAll('[data-ex]');
-      const novo = blocos[blocos.length - 1];
-      atualizarCont();
-      novo.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      // Fechou a lista sem escolher: não deixa um exercício sem nome sobrando.
-      escolher(novo, () => { if (!novo.querySelector('[data-f="nome"]').value.trim()) { novo.remove(); atualizarCont(); } });
+      // Escolhe vários de uma vez; cada um entra como um bloco novo, só faltando séries, repetições e descanso.
+      abrirEscolha((nomes) => {
+        const lista = el.querySelector('#ex-lista');
+        let primeiro = null;
+        nomes.forEach((nome) => {
+          lista.insertAdjacentHTML('beforeend', blocoExercicio({ nome, cardio: BASE.Cardio.includes(nome) }));
+          if (!primeiro) primeiro = lista.lastElementChild;
+        });
+        atualizarCont();
+        if (primeiro) {
+          primeiro.scrollIntoView({ block: 'start', behavior: 'smooth' });
+          const campo = primeiro.querySelector(primeiro.classList.contains('cardio') ? '[data-f="minutos"]' : '[data-f="series"]');
+          if (campo) campo.focus({ preventScroll: true });
+        }
+      }, '', null, true);
     } else if (b.dataset.ed === 'salvar' || b.dataset.ed === 'continuar') {
       const d = coletar(el);
       if (!d.nome) return erro('Dê um nome para o treino.');
