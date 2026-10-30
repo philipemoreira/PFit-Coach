@@ -2,6 +2,7 @@
 import { auth, signOut, db, doc, getDoc } from './firebase.js';
 import { estado } from './estado.js';
 import { abrirFolha, confirmar, fecharTodasFolhas } from './folha.js';
+import { abrirContas, aposSair, lerContas } from './contas.js';
 import { escaparHtml, dataLocal, toast, numero, formatarDataCurta, avatarHtml, reduzirFoto } from './util.js';
 import { salvarPerfil, lerTudo, gravarVarios, salvarGlobal, removerGlobal } from './dados.js';
 import { temaSalvo, definirTema } from './tema.js';
@@ -248,6 +249,7 @@ export const contaTela = {
       <div class="linhas">
         ${personal ? '' : linha('personal-abrir', 'Meu personal', estado.vinculo ? escaparHtml(estado.vinculo.personalNome || 'Conectado') : 'Conectar com o código dele')}
         ${personal ? '' : linha('saude-abrir', 'Meus dados e saúde', p.anamnese ? 'Ver ou atualizar suas respostas' : 'Responder o questionário inicial (1 minuto)')}
+        ${linha('contas-abrir', 'Trocar de conta', lerContas().length > 1 ? `${lerContas().length} contas neste aparelho` : 'Entrar com outra conta sem sair desta')}
         ${resumoPlano() ? linha('planos-abrir', 'Meu plano', resumoPlano().sub, '', resumoPlano().venc ? 'perigo' : '') : ''}
         ${linha('aba', 'Configurações', personal ? 'Dados pessoais, tema e privacidade' : 'Tema, metas, backup e privacidade', 'data-aba="config"')}
         ${linha('ajuda', 'Ajuda', 'Como usar o app e falar com o suporte')}
@@ -259,6 +261,7 @@ export const contaTela = {
     <p class="aviso-rodape">PFit Coach · versão 1</p>`;
   },
   acoes: {
+    'contas-abrir': () => abrirContas(),
     'planos-abrir': () => abrirFolha(folhaPlanos()),
     'personal-abrir': () => abrirFolha(`${cartaoPersonal()}<button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`),
     'saude-abrir': () => abrirFolha(`${cartaoSaude(estado.perfil || {})}<button class="btn secundario cheio" type="button" data-fechar>Fechar</button>`, { classe: 'folha-alta' }),
@@ -412,7 +415,7 @@ export const contaTela = {
     'backup-baixar': () => baixarBackup(),
     'backup-restaurar': () => document.getElementById('arq-backup').click(),
     sair: async () => {
-      if (await confirmar('Sair da conta?', { ok: 'Sair' })) await signOut(auth);
+      if (await confirmar('Sair da conta?', { ok: 'Sair' })) { await signOut(auth); aposSair(); }
     }
   }
 };

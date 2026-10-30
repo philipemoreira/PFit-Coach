@@ -1,5 +1,6 @@
 // Ponto de partida do app: decide qual tela mostrar e liga os cliques às ações.
 import { configurado, auth, onAuthStateChanged, signOut } from './firebase.js';
+import { registrarConta, aposSair, cancelarAdicionar } from './contas.js';
 import { estado, iniciarDados, pararDados, dietaLiberada } from './estado.js';
 import { toast, escaparHtml } from './util.js';
 import { nav } from './nav.js';
@@ -57,7 +58,8 @@ TELAS.forEach(({ tela }) => {
 ACOES.aba = (el) => nav.irPara(el.dataset.aba);
 ACOES.voltar = () => nav.voltar();
 ACOES['dieta-trancada'] = () => toast('A dieta é liberada quando você tem um personal. Ele monta a sua dieta para você.');
-ACOES['sair-direto'] = () => signOut(auth);
+ACOES['sair-direto'] = async () => { await signOut(auth); aposSair(); };
+ACOES['conta-cancelar-add'] = () => cancelarAdicionar();
 
 const souPersonal = () => !!(estado.perfil && estado.perfil.papel === 'personal');
 // Com a assinatura vencida só ficam Minha conta e Configurações (sem menu de baixo).
@@ -179,6 +181,7 @@ nav.renderizar = renderizar;
 
 function escolherTela() {
   let nova;
+  if (estado.uid && estado.email) registrarConta({ email: estado.email, nome: (estado.perfil && estado.perfil.nome) || '' });
   if (!estado.uid) nova = 'entrada';
   else if (estado.perfil === undefined || estado.criandoConta) nova = 'carregando';
   else if (estado.perfil === null) nova = 'completar';

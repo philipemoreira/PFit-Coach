@@ -1,5 +1,6 @@
 // Privacidade, termos e exclusão da conta.
 import { auth, signOut, deleteUser } from './firebase.js';
+import { aposSair } from './contas.js';
 import { estado } from './estado.js';
 import { abrirFolha, confirmar } from './folha.js';
 import { toast } from './util.js';
@@ -87,11 +88,13 @@ export function abrirExclusao() {
         console.error(err);
         f.fechar();
         await signOut(auth);
+        aposSair();
         toast('Seus dados foram apagados. Para remover também o login, entre de novo e repita “Excluir minha conta”.');
         return;
       }
       f.fechar();
       toast('Conta excluída.');
+      aposSair();
     } catch (err) {
       console.error(err);
       f.el.querySelector('[data-erro]').textContent = 'Não consegui apagar tudo. Confira a internet e tente de novo.';

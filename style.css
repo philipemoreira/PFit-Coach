@@ -1424,3 +1424,12 @@ h1 { font-size: 30px; letter-spacing: -.8px; }
 /* link com cara de botão (ex.: Falar com o suporte) */
 a.btn{display:flex;align-items:center;justify-content:center;box-sizing:border-box;text-decoration:none;text-align:center}
 a.btn.cheio{width:100%}
+
+/* v49 trocar de conta */
+.conta-troca{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--borda);background:transparent;color:inherit;font:inherit;padding:12px 4px;cursor:pointer}
+.conta-troca:last-child{border-bottom:0}
+.conta-troca-txt{flex:1;min-width:0;display:grid;gap:2px}
+.conta-troca-txt b{font-size:15px}
+.conta-troca-txt small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conta-troca.atual{cursor:default}
+.aviso-add-conta{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:var(--card2);border-bottom:1px solid var(--borda);font-size:14px}

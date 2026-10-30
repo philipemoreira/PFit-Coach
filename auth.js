@@ -1,4 +1,5 @@
 // Telas de entrada: login, criar conta, completar cadastro e avisos iniciais.
+import { adicionandoConta } from './contas.js';
 import {
   auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail,
   GoogleAuthProvider, signInWithPopup
@@ -184,19 +185,21 @@ const painelMarca = `
     </ul>
   </aside>`;
 
+const avisoAdicionando = () => (adicionandoConta() ? '<div class="aviso-add-conta"><span>Entrando com <b>outra conta</b>. A atual continua salva.</span><button type="button" class="btn pequeno secundario" data-acao="conta-cancelar-add">Cancelar</button></div>' : '');
+
 export function htmlEntrada() {
   if (modo === 'criar') {
     const passo = cad.tipo ? cad.passo : 'tipo';
     const corpo = passo === 'codigo' ? htmlPassoCodigo() : passo === 'conta' ? htmlPassoConta() : htmlPassoTipo();
     return `
   <main class="entrada">
-    ${painelMarca}
+    ${avisoAdicionando()}${painelMarca}
     <div class="entrada-caixa">${corpo}</div>
   </main>`;
   }
   return `
   <main class="entrada">
-    ${painelMarca}
+    ${avisoAdicionando()}${painelMarca}
     <div class="entrada-caixa">
       <div class="logo-grande">${LOGO}</div>
       <h1>Bem-vindo</h1>
@@ -222,7 +225,7 @@ export function htmlCompletar() {
   const corpo = passo === 'codigo' ? htmlPassoCodigo() : passo === 'nome' ? htmlPassoNome() : htmlPassoTipo().replace(/<p class="rodape-entrada">[\s\S]*?<\/p>/, '<button class="link centro" type="button" data-acao="sair-direto">Sair</button>');
   return `
   <main class="entrada">
-    ${painelMarca}
+    ${avisoAdicionando()}${painelMarca}
     <div class="entrada-caixa">${corpo}</div>
   </main>`;
 }
