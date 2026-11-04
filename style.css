@@ -1463,3 +1463,73 @@ textarea.in{resize:vertical;min-height:110px}
 .prev-info small.mudo { color: var(--mudo); opacity: 1; }
 .treino-dia-bt { display: flex; gap: 8px; flex: none; }
 .treino-card .linha-botoes .btn { padding-left: 8px; padding-right: 8px; white-space: nowrap; }
+
+/* ============ v58 — visual minimalista (só dentro do app; a tela de entrada não muda) ============ */
+.shell {
+  --card: #101318; --card2: #181c22; --borda: rgba(255, 255, 255, .07);
+}
+:root[data-tema="claro"] .shell { --card: #ffffff; --card2: #f0f2f5; --borda: rgba(15, 20, 30, .07); }
+@media (prefers-color-scheme: light) { :root:not([data-tema]) .shell { --card: #ffffff; --card2: #f0f2f5; --borda: rgba(15, 20, 30, .07); } }
+
+.shell .conteudo { padding-top: 14px; }
+.shell h1 { font-weight: 700; letter-spacing: -1px; }
+.shell .card { background: var(--card); border-radius: 22px; padding: 20px; margin-bottom: 14px; }
+.shell .card > h2, .shell .card-topo h2 { font-size: 15px; font-weight: 600; color: var(--mudo); letter-spacing: 0; }
+.shell .card.destaque { box-shadow: none; background: var(--card); }
+.shell .selo { background: transparent; color: var(--mudo); padding: 0; font-weight: 600; font-size: 13px; }
+
+/* números grandes: brancos; o limão fica só para ação e progresso */
+.shell .grande { font-weight: 700; letter-spacing: -1.5px; }
+.shell .tile .numero { color: var(--texto); font-weight: 700; }
+.shell .link { color: var(--mudo); font-weight: 600; }
+.shell .btn:not(.secundario):not(.perigo):not(.perigo-claro):not(.escuro) { font-weight: 700; }
+.shell .btn.secundario { background: var(--card2); color: var(--texto); }
+
+/* semana: pontinhos discretos */
+.shell .faixa-semana { gap: 8px; margin-bottom: 18px; }
+.shell .faixa-semana .dia { font-weight: 600; font-size: 11px; letter-spacing: .5px; }
+.shell .faixa-semana .dia i { background: var(--card); border: 0; height: 34px; border-radius: 12px; box-shadow: none; }
+.shell .faixa-semana .dia.on i { background: var(--limao); box-shadow: none; }
+.shell .faixa-semana .dia.hoje i { border: 0; box-shadow: inset 0 0 0 1.5px var(--mudo); }
+.shell .faixa-semana .dia.on.hoje i { box-shadow: none; }
+
+/* treino de hoje: bloco único, calmo */
+.shell .hero-treino { border-radius: 26px; padding: 22px; }
+.shell .card.destaque:first-of-type { background: var(--card); }
+
+/* lista de treinos */
+.shell .treino-card { border-left: 0; padding: 18px 20px; }
+.shell .treino-card.e-hoje { box-shadow: none; background: linear-gradient(0deg, var(--card), var(--card)) padding-box; position: relative; }
+.shell .treino-card.e-hoje::after { content: ""; position: absolute; left: 20px; top: 0; width: 28px; height: 3px; border-radius: 0 0 3px 3px; background: var(--limao); bottom: auto; }
+.shell .treino-card .linha-botoes { gap: 8px; margin-top: 14px; }
+.shell .treino-card .linha-botoes .btn.secundario { background: transparent; box-shadow: inset 0 0 0 1px var(--borda); color: var(--mudo); }
+
+/* barra de baixo: mais leve, ícone ativo limão sem bloco enorme */
+.shell .nav, .nav { background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: inset 0 0 0 1px var(--borda); }
+.nav-btn { color: var(--mudo); }
+.nav-btn.ativo { background: var(--limao); color: var(--sobre-limao); }
+
+@media (min-width: 900px) {
+  .shell .conteudo { max-width: 920px; padding: 44px 48px 64px; }
+  .nav { border-radius: 24px; background: var(--card); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .nav-btn { border-radius: 14px; height: 46px; }
+  .nav-btn.ativo { background: var(--card2); color: var(--texto); }
+  .nav-btn.ativo svg { stroke: var(--limao); }
+  .shell .faixa-semana .dia i { height: 40px; }
+}
+.shell { --card: #14171c; --card2: #1c2027; }
+.shell .card, .shell .card.destaque, .shell .treino-card, .shell .tile { border: 0; box-shadow: none; }
+.shell .grande, .shell .card .grande { color: var(--texto); }
+.shell .grande small { color: var(--mudo); }
+.shell .treino-card.e-hoje::after { top: 0; left: 20px; }
+.shell .hero-treino { box-shadow: none; }
+.shell .card.destaque .ok-txt, .shell .card.destaque [class*="ok"] { color: var(--destaque); }
+.shell .volume-hoje { border: 0; }
+.shell .volume-hoje .volume-num { color: var(--texto); font-weight: 700; }
+.shell .hero-treino.feito, .shell .hero-feito { background: var(--card); border: 0; box-shadow: none; }
+.shell .hero-treino.feito { border: 0; box-shadow: none; }
+.shell .treino-card > h2, .shell .treino-card .card-topo h2 { font-size: 20px; font-weight: 700; color: var(--texto); letter-spacing: -.4px; }
+.shell .treino-card .dia-chip, .shell .treino-card .chip { background: var(--card2); color: var(--mudo); }
+.shell .treino-card [class*="chip"][aria-pressed], .shell .treino-card .chips-dias > * { background: var(--card2); color: var(--texto); border: 0; }
+.shell .num-card .num, .shell .num-card b, .shell .num-card strong { color: var(--texto); }
+.shell .ex-plano { color: var(--mudo); }
