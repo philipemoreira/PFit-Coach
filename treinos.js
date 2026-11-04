@@ -2,7 +2,7 @@
 import { estado } from './estado.js';
 import { contar } from './conquistas-personal.js';
 import { abrirFolha, confirmar, fecharTodasFolhas } from './folha.js';
-import { escaparHtml, novoId, numero, DIAS_CURTOS, ORDEM_DIAS, toast } from './util.js';
+import { escaparHtml, novoId, numero, formatarNumero, DIAS_CURTOS, ORDEM_DIAS, toast } from './util.js';
 import { salvarDoc, removerDoc } from './dados.js';
 import { iniciarTreino } from './treinar.js';
 import { abrirAnilhas } from './anilhas.js';
@@ -35,10 +35,36 @@ function cardTreino(t) {
     ${chipsDias(t.dias) || '<p class="mudo peq">Sem dia marcado</p>'}
     ${previa ? `<p class="previa">${previa}${exs.length > 3 ? ' …' : ''}</p>` : ''}
  <div class="linha-botoes">
+      <button class="btn secundario" type="button" data-acao="treino-ver" data-id="${escaparHtml(t.id)}">Ver treino</button>
       ${comPersonal() ? '' : `<button class="btn secundario" type="button" data-acao="treino-editar" data-id="${escaparHtml(t.id)}">Editar</button>`}
       <button class="btn" type="button" data-acao="treino-iniciar" data-id="${escaparHtml(t.id)}">Iniciar</button>
     </div>
   </section>`;
+}
+
+// Prévia do treino: mostra todos os exercícios (séries, reps, descanso, carga, observação) sem precisar iniciar.
+function linhaPrevia(e, i) {
+  const partes = e.cardio
+    ? ['Cardio', e.minutos ? `${e.minutos} min` : '']
+    : [`${e.series || '?'} série${e.series === 1 ? '' : 's'}`, e.reps ? `${escaparHtml(e.reps)} reps` : '', e.descanso ? `descanso ${e.descanso} s` : '', e.carga ? `${formatarNumero(e.carga)} kg` : ''];
+  return `<li class="prev-ex">
+    <span class="prev-n" aria-hidden="true">${i + 1}</span>
+    <div class="prev-info"><b>${escaparHtml(e.nome)}</b><small>${partes.filter(Boolean).join(' · ')}</small>${e.obs ? `<small class="mudo">${escaparHtml(e.obs)}</small>` : ''}</div>
+  </li>`;
+}
+
+function abrirPrevia(t) {
+  const exs = t.exercicios || [];
+  const series = exs.filter((e) => !e.cardio).reduce((n, e) => n + (e.series || 0), 0);
+  abrirFolha(`
+    <h2>${escaparHtml(t.nome)}</h2>
+    ${chipsDias(t.dias)}
+    <p class="mudo peq">${exs.length} exercício${exs.length === 1 ? '' : 's'}${series ? ` · ${series} séries` : ''}</p>
+    ${exs.length ? `<ol class="prev-lista">${exs.map(linhaPrevia).join('')}</ol>` : '<p class="mudo">Esse treino ainda não tem exercícios.</p>'}
+    <div class="linha-botoes">
+      <button class="btn secundario" type="button" data-fechar>Fechar</button>
+      ${exs.length ? `<button class="btn" type="button" data-acao="treino-iniciar" data-id="${escaparHtml(t.id)}">Iniciar treino</button>` : ''}
+    </div>`, { classe: 'folha-alta' });
 }
 
 const ICONE_LISTA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
@@ -361,6 +387,10 @@ export const treinos = {
     'treino-novo': () => {
       nav.irPara('treinos');
       abrirEditorTreino();
+    },
+    'treino-ver': (el) => {
+      const t = estado.treinos.find((x) => x.id === el.dataset.id);
+      if (t) abrirPrevia(t);
     },
     'treino-editar': (el) => {
       const t = estado.treinos.find((x) => x.id === el.dataset.id);

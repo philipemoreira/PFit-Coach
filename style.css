@@ -1452,3 +1452,14 @@ textarea.in{resize:vertical;min-height:110px}
 .lib-item > span small { display: block; margin-top: 2px; }
 .lib-rodape { position: sticky; bottom: -1px; background: var(--card); padding: 10px 0 16px; margin-top: 8px; box-shadow: 0 -10px 12px -6px var(--card); }
 .lib-rodape .btn[disabled] { opacity: .45; cursor: default; }
+
+/* v57: ver o treino sem iniciar */
+.prev-lista { list-style: none; margin: 12px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.prev-ex { display: flex; gap: 12px; align-items: flex-start; padding: 12px; background: var(--card2); border: 1px solid var(--borda); border-radius: 14px; }
+.prev-n { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--destaque); color: #0e1012; font-weight: 800; font-size: 14px; display: grid; place-items: center; }
+.prev-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.prev-info b { font-size: 16px; }
+.prev-info small { font-size: 13px; color: var(--texto); opacity: .85; }
+.prev-info small.mudo { color: var(--mudo); opacity: 1; }
+.treino-dia-bt { display: flex; gap: 8px; flex: none; }
+.treino-card .linha-botoes .btn { padding-left: 8px; padding-right: 8px; white-space: nowrap; }

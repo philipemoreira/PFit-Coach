@@ -75,7 +75,10 @@ function blocoHero() {
         <strong>${escaparHtml(t.nome)}</strong>
         <p>${(t.exercicios || []).length} exercício${(t.exercicios || []).length === 1 ? '' : 's'}${feitos.has(t.id) ? ' · <span class="ok-txt">feito hoje ✔</span>' : ''}</p>
       </div>
-      <button class="btn pequeno ${feitos.has(t.id) ? 'secundario' : 'escuro'}" type="button" data-acao="treino-iniciar" data-id="${escaparHtml(t.id)}">${feitos.has(t.id) ? 'Repetir' : 'Iniciar'}</button>
+      <div class="treino-dia-bt">
+        <button class="btn pequeno secundario" type="button" data-acao="treino-ver" data-id="${escaparHtml(t.id)}">Ver</button>
+        <button class="btn pequeno ${feitos.has(t.id) ? 'secundario' : 'escuro'}" type="button" data-acao="treino-iniciar" data-id="${escaparHtml(t.id)}">${feitos.has(t.id) ? 'Repetir' : 'Iniciar'}</button>
+      </div>
     </div>`).join('');
   const livre = !doDia.length ? (treinouHoje ? '<h2>Você treinou hoje ✔</h2><p>Treino feito. Bom descanso!</p>' : '<h2>Dia livre</h2><p>Nenhum treino marcado para hoje.</p>') : '';
 
